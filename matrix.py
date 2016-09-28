@@ -4,25 +4,22 @@ class Matrix(object):
         self.col_len = col_len
         self.rows = [[0] * self.col_len] * self.row_len
 
-    def _check_index(self, row, column):
-        if row < 0 or row >= self.row_len or column < 0 or column > self.row_len:
-            raise IndexError('Index is out of range')
-
     def __getitem__(self, index):
-        row, column = index
-        self._check_index(row, column)
-        return self.rows[row][column]
+        return self.rows[index]
 
     def __setitem__(self, index, value):
-        row, column = index
-        self._check_index(row, column)
         self.rows[index] = value
 
     def __delitem__(self, index):
         pass
 
     def __add__(self, other):
-        print('Add called')
+        if self.row_len != other.row_len or self.col_len != other.row_len:
+            raise ValueError('Cannot add matrices with different shapes')
+        rows = [list(map(sum, zip(self.rows[i], other[i]))) for i in range(self.row_len)]
+        result = Matrix(self.row_len, self.col_len)
+        result.rows = rows
+        return result
 
     def __mul__(self, other):
         print('Mul called')
