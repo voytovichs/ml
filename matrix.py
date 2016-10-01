@@ -1,10 +1,14 @@
 class Matrix(object):
-    def __init__(self, row_len, col_len):
+    def __init__(self, row_len, col_len, initial=None):
         self.row_n = row_len
         self.col_n = col_len
         self.rows = []
-        for i in range(self.row_n):
-            self.rows.append([0] * self.col_n)
+        if not initial:
+            for i in range(self.row_n):
+                self.rows.append([0] * self.col_n)
+        else:
+            for i in range(self.row_n):
+                self.rows.append(initial[i][:])
 
     def __getitem__(self, index):
         return self.rows[index]
@@ -43,7 +47,41 @@ class Matrix(object):
                 m[j][i] = self[i][j]
         return m
 
+    def _get_identity_matrix(self):
+        if self.row_n != self.col_n:
+            raise ValueError("Cannot compute identity matrix for non-square shape")
+        m = Matrix(self.row_n, self.row_n)
+        for i in range(self.row_n):
+            m[i][i] = 1
+        return m
+
+    def _pivotize(self):
+        ID = self._get_identity_matrix()
+        n = self.row_n
+        for j in range(n):
+            row = max(range(j, n), key=lambda i: abs(self[i][j]))
+            if j != row:
+                ID[j], ID[row] = ID[row], ID[j]
+        return ID
+
+    def _get_LU(self):
+        if self.row_n != self.col_n:
+            raise ValueError('Cannot find LU decomposition for non-square matrix')
+        n = self.row_n
+        L = self._get_identity_matrix()
+        U = Matrix(n, n)
+        P = self._pivotize()
+        A2 = P * self
+        for j in range(n):
+            L[j][j] = 1
+            for i in range(j + 1):
+                s1 = sum(U[k][j] * L[i][k] for k in range(i))
+                U[i][j] = A2[i][j] - s1
+            for i in range(j, n):
+                s2 = sum(U[k][j] * L[i][k] for k in range(i))
+                L[i][j] = (A2[i][j] - s2) / U[j][j]
+        return L, U
+
     def get_inverted(self):
-        if self.rows != self.columns:
+        if self.row_n != self.col_n:
             raise ValueError('Non-square matrix cannot be inverted')
-        
