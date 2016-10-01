@@ -1,14 +1,21 @@
 class Matrix(object):
-    def __init__(self, row_len, col_len, initial=None):
-        self.row_n = row_len
-        self.col_n = col_len
-        self.rows = []
-        if not initial:
+    def __init__(self, init_data):
+        if isinstance(init_data, tuple):
+            n, m = init_data
+            self.row_n = n
+            self.col_n = m
+            self.rows = []
             for i in range(self.row_n):
                 self.rows.append([0] * self.col_n)
         else:
-            for i in range(self.row_n):
-                self.rows.append(initial[i][:])
+            array = init_data
+            n = len(array)
+            m = 0 if n == 0 else len(array[0])
+            self.row_n = n
+            self.col_n = m
+            self.rows = []
+            for i in range(n):
+                self.rows.append(array[i][:])
 
     def __getitem__(self, index):
         return self.rows[index]
@@ -24,23 +31,23 @@ class Matrix(object):
 
     def __add__(self, other):
         if self.row_n != other.row_n or self.col_n != other.row_n:
-            raise ValueError('Matrices do not fit addition shape condition')
+            raise ValueError('Matrices do not fit shape condition')
         rows = [list(map(sum, zip(self.rows[i], other[i]))) for i in range(self.row_n)]
-        result = Matrix(self.row_n, self.col_n)
+        result = Matrix((self.row_n, self.col_n))
         result.rows = rows
         return result
 
     def __mul__(self, other):
         if self.row_n != other.col_n or self.col_n != other.row_n:
-            raise ValueError('Matrices do not fit multiplying shape condition')
-        m = Matrix(self.row_n, other.col_n)
+            raise ValueError('Matrices do not fit shape condition')
+        m = Matrix((self.row_n, other.col_n))
         for i in range(m.row_n):
             for j in range(m.col_n):
                 m[i][j] = sum([self[i][k] * other[k][j] for k in range(len(self[i]))])
         return m
 
     def get_transposed(self):
-        m = Matrix(self.col_n, self.row_n)
+        m = Matrix((self.col_n, self.row_n))
         for i in range(self.row_n):
             for j in range(self.col_n):
                 m[j][i] = self[i][j]
@@ -49,7 +56,7 @@ class Matrix(object):
     def _get_identity_matrix(self):
         if self.row_n != self.col_n:
             raise ValueError("Cannot compute identity matrix for non-square shape")
-        m = Matrix(self.row_n, self.row_n)
+        m = Matrix((self.row_n, self.row_n))
         for i in range(self.row_n):
             m[i][i] = 1
         return m
@@ -68,7 +75,7 @@ class Matrix(object):
             raise ValueError('Cannot find LU decomposition for non-square matrix')
         n = self.row_n
         L = self._get_identity_matrix()
-        U = Matrix(n, n)
+        U = Matrix((n, n))
         P = self._pivotize()
         A2 = P * self
         for j in range(n):
@@ -103,8 +110,8 @@ class Matrix(object):
 
 
 def mult_matrix_test():
-    m1 = Matrix(2, 3, [[1, 2, 3], [4, 5, 6]])
-    m2 = Matrix(3, 2, [[7, 8], [9, 10], [11, 12]])
+    m1 = Matrix([[1, 2, 3], [4, 5, 6]])
+    m2 = Matrix([[7, 8], [9, 10], [11, 12]])
     m3 = m1 * m2
     m3_expected = [[58, 64], [139, 154]]
     for i in range(len(m3_expected)):
@@ -113,19 +120,19 @@ def mult_matrix_test():
 
 
 def lu_decomposition_test():
-    m = Matrix(3, 3, [[1, 0, 2], [2, -1, 3], [4, 1, 8]])
+    m = Matrix([[1, 0, 2], [2, -1, 3], [4, 1, 8]])
     L, U = m._get_LU()
     LU = L * U
     print(L)
     print(U)
     for i in range(m.row_n):
         for j in range(m.col_n):
-            # well, the line order may change
+            # lines order may change, compare LU with m manually
             assert m[i][j] == LU[i][j], 'm[{0}][{1}](={2}) != LU[{0}][{1}](={3})'.format(i, j, m[i][j], LU[i][j])
 
 
 def inverted_matrix_test():
-    m = Matrix(3, 3, [[1, 0, 2], [2, -1, 3], [4, 1, 8]])
+    m = Matrix([[1, 0, 2], [2, -1, 3], [4, 1, 8]])
     m_inv = m.get_inverted()
     I = m * m_inv
     print(I)
