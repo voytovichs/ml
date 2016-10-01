@@ -37,7 +37,6 @@ class Matrix(object):
         for i in range(m.row_n):
             for j in range(m.col_n):
                 m[i][j] = sum([self[i][k] * other[k][j] for k in range(len(self[i]))])
-
         return m
 
     def get_transposed(self):
@@ -78,10 +77,61 @@ class Matrix(object):
                 s1 = sum(U[k][j] * L[i][k] for k in range(i))
                 U[i][j] = A2[i][j] - s1
             for i in range(j, n):
-                s2 = sum(U[k][j] * L[i][k] for k in range(i))
+                s2 = sum(U[k][j] * L[i][k] for k in range(j))
                 L[i][j] = (A2[i][j] - s2) / U[j][j]
         return L, U
 
     def get_inverted(self):
         if self.row_n != self.col_n:
             raise ValueError('Non-square matrix cannot be inverted')
+        L, U = self._get_LU()
+        n = self.row_n
+        R = self
+        # Ly=I, forward substitution
+        for k in range(n):
+            for i in range(k + 1, n):
+                for j in range(n):
+                    R[i][j] -= R[k][j] * L[i][k]
+        # U*X=y, backward substitution
+        for k in range(n - 1, -1, -1):
+            for j in range(n):
+                R[k][j] /= U[k][k]
+            for i in range(k):
+                for j in range(n):
+                    R[i][j] -= R[k][j] * U[i][k]
+        return R
+
+
+def mult_matrix_test():
+    m1 = Matrix(2, 3, [[1, 2, 3], [4, 5, 6]])
+    m2 = Matrix(3, 2, [[7, 8], [9, 10], [11, 12]])
+    m3 = m1 * m2
+    m3_expected = [[58, 64], [139, 154]]
+    for i in range(len(m3_expected)):
+        for j in range(len(m3_expected[0])):
+            assert m3[i][j] == m3_expected[i][j]
+
+
+def lu_decomposition_test():
+    m = Matrix(3, 3, [[1, 0, 2], [2, -1, 3], [4, 1, 8]])
+    L, U = m._get_LU()
+    LU = L * U
+    print(L)
+    print(U)
+    for i in range(m.row_n):
+        for j in range(m.col_n):
+            # well, the line order may change
+            assert m[i][j] == LU[i][j], 'm[{0}][{1}](={2}) != LU[{0}][{1}](={3})'.format(i, j, m[i][j], LU[i][j])
+
+
+def inverted_matrix_test():
+    m = Matrix(3, 3, [[1, 0, 2], [2, -1, 3], [4, 1, 8]])
+    m_inv = m.get_inverted()
+    I = m * m_inv
+    print(I)
+    for i in range(m.row_n):
+        for j in range(m.col_n):
+            if i == j:
+                assert abs(I[i][j] - 1) < 0.001, 'I[{0}][{1}] != 1 (=={2})'.format(i, j, I[i][j])
+            else:
+                assert abs(I[i][j]) < 0.001, 'I[{0}][{1}] != 0 (=={2})'.format(i, j, I[i][j])
