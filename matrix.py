@@ -10,12 +10,22 @@ class Matrix(object):
         else:
             array = init_data
             n = len(array)
-            m = 0 if n == 0 else len(array[0])
+            m = 0
+            if n != 0:
+                if isinstance(array[0], list):
+                    m = len(array[0])
+                else:
+                    m = 1
             self.row_n = n
             self.col_n = m
             self.rows = []
-            for i in range(n):
-                self.rows.append(array[i][:])
+            if isinstance(array[0], list):
+                for i in range(n):
+                    self.rows.append(array[i][:])
+            else:
+                for i in range(n):
+                    self.rows.append(array[i])
+
 
     def __getitem__(self, index):
         return self.rows[index]
