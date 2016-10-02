@@ -35,9 +35,19 @@ def read(file_path):
     return Matrix(X), Matrix(y)
 
 
+def mean(vec):
+    return sum(vec) / len(vec)
+
+
+def std(vec, mean=None):
+    if not mean:
+        mean = mean(vec)
+    return sum([(vec[i] - mean) ** 2 for i in range(len(vec))])
+
+
 def rmse(y, y_est):
     n = y.row_n
-    return sum([sqrt(abs(y[i][0] - y_est[i])) for i in range(n)]) / n
+    return sum([sqrt((y[i][0] - y_est[i]) ** 2) for i in range(n)]) / n
 
 
 def split(X, y):
@@ -70,5 +80,11 @@ def cross_validation(X, y, repeat=1000):
     return error
 
 
-X, y = read('/Users/voytovichs/Code/ml/students.txt')
-err = cross_validation(X, y)
+def scale(X):
+    for i in range(X.row_n):
+        m = mean(X[i])
+        s = std(X[i], m)
+        for j in range(X.col_n):
+            X[i][j] -= m
+            X[i][j] /= s
+
