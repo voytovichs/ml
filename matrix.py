@@ -71,32 +71,40 @@ class Matrix(object):
             m[i][i] = 1
         return m
 
-    def _pivotize(self):
-        ID = self._get_identity_matrix()
-        n = self.row_n
-        for j in range(n):
-            row = max(range(j, n), key=lambda i: abs(self[i][j]))
-            if j != row:
-                ID[j], ID[row] = ID[row], ID[j]
-        return ID
-
-    def _get_LU(self):
+    def get_lu_decomposition(self):
         if self.row_n != self.col_n:
-            raise ValueError('Cannot find LU decomposition for non-square matrix')
+            raise ValueError('Cannot find LUP decomposition for non-square matrix')
         n = self.row_n
-        L = self._get_identity_matrix()
-        U = Matrix((n, n))
-        P = self._pivotize()
-        A2 = P * self
-        for j in range(n):
-            L[j][j] = 1
-            for i in range(j + 1):
-                s1 = sum(U[k][j] * L[i][k] for k in range(i))
-                U[i][j] = A2[i][j] - s1
-            for i in range(j, n):
-                s2 = sum(U[k][j] * L[i][k] for k in range(j))
-                L[i][j] = (A2[i][j] - s2) / U[j][j]
-        return L, U
+        pi = [i for i in range(n)]
+        lu = Matrix(self.rows)
+        for k in range(n):
+            p = 0
+            for i in range(k, n):
+                if abs(lu[i][k]) > p:
+                    p = lu[i][k]
+                    k_p = i
+            if p == 0:
+                raise ValueError('Cannot find LUP decomposition of singular matrix')
+            tmp = pi[i]
+            pi[i] = k_p
+            pi[k_p] = tmp
+            lu.swap(i, k_p)
+            for i in range(k + 1, n):
+                lu[i][k] /= lu[k][k]
+                for j in range(k + 1, n):
+                    lu[i][j] -= lu[i][k] * lu[k][j]
+            L = Matrix(lu.rows)
+            for i in range(n):
+                for j in range(i, n):
+                    if i == j:
+                        L[i][j] = 1
+                    else:
+                        L[i][j] = 0
+            U = lu
+            for i in range(n):
+                for j in range(i):
+                    U[i][j] = 0
+            return L, U
 
     def get_inverted(self):
         if self.row_n != self.col_n:
@@ -133,6 +141,7 @@ def lu_decomposition_test():
     m = Matrix([[1, 0, 2], [2, -1, 3], [4, 1, 8]])
     L, U = m._get_LU()
     LU = L * U
+    print(m)
     print(L)
     print(U)
     for i in range(m.row_n):
