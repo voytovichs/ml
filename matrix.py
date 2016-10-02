@@ -96,6 +96,14 @@ class Matrix(object):
         return L, U
 
     def get_transposed(self):
+        if self.row_n == 1:
+            m = Matrix(len(self.col_n), 1)
+            m.rows = self.rows[:]
+            return m
+        if self.col_n == 1:
+            m = Matrix(1, len(self.row_n))
+            m.rows = self.rows[:]
+            return m
         m = Matrix((self.col_n, self.row_n))
         for i in range(self.row_n):
             for j in range(self.col_n):
