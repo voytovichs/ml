@@ -71,6 +71,15 @@ class Matrix(object):
             m[i][i] = 1
         return m
 
+    def swap(self, i, j):
+        tmp = self.rows[i]
+        self.rows[i] = self.rows[j]
+        self.rows[j] = tmp
+        return self
+
+    def shape(self):
+        return self.row_n, self.row_n
+
     def get_lu_decomposition(self):
         if self.row_n != self.col_n:
             raise ValueError('Cannot find LUP decomposition for non-square matrix')
