@@ -10,8 +10,8 @@ class Matrix(object):
         else:
             array = init_data
             if not isinstance(array[0], list):
-                self.row_n = 1
-                self.col_n = len(array)
+                self.row_n = len(array)
+                self.col_n = 1
                 self.rows = array
             else:
                 n = len(array)
@@ -43,7 +43,7 @@ class Matrix(object):
         return result
 
     def __mul__(self, other):
-        if self.row_n != other.col_n:
+        if self.col_n != other.row_n:
             raise ValueError('Matrices do not fit shape condition')
         m = Matrix((self.row_n, other.col_n))
         for i in range(m.row_n):
