@@ -1,3 +1,5 @@
+from math import sqrt
+
 from matrix import Matrix
 
 
@@ -29,3 +31,7 @@ def read(file_path):
             X.append(num_line[0: n - 1])
             y.append(num_line[n - 1])
     return Matrix(X), Matrix(y)
+
+
+def rmse(y, y_est):
+    return sum([sqrt(abs(y[i] - y_est[i])) for i in range(len(y))]) / len(y)
