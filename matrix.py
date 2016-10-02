@@ -82,19 +82,18 @@ class Matrix(object):
                 lu[i][k] /= lu[k][k]
                 for j in range(k + 1, n):
                     lu[i][j] -= lu[i][k] * lu[k][j]
-            L = Matrix(lu.rows)
-            for i in range(n):
-                for j in range(i, n):
-                    if i == j:
-                        L[i][j] = 1
-                    else:
-                        L[i][j] = 0
-            U = lu
-            for i in range(n):
-                for j in range(i):
-                    U[i][j] = 0
-
-            return L, U
+        L = Matrix(lu.rows)
+        for i in range(n):
+            for j in range(i, n):
+                if i == j:
+                    L[i][j] = 1
+                else:
+                    L[i][j] = 0
+        U = lu
+        for i in range(n):
+            for j in range(i):
+                U[i][j] = 0
+        return L, U
 
     def get_transposed(self):
         m = Matrix((self.col_n, self.row_n))
@@ -110,33 +109,6 @@ class Matrix(object):
         for i in range(self.row_n):
             m[i][i] = 1
         return m
-
-    def _pivotize(self):
-        ID = self._get_identity_matrix()
-        n = self.row_n
-        for j in range(n):
-            row = max(range(j, n), key=lambda i: abs(self[i][j]))
-            if j != row:
-                ID[j], ID[row] = ID[row], ID[j]
-        return ID
-
-    def _get_LU(self):
-        if self.row_n != self.col_n:
-            raise ValueError('Cannot find LU decomposition for non-square matrix')
-        n = self.row_n
-        L = self._get_identity_matrix()
-        U = Matrix((n, n))
-        P = self._pivotize()
-        A2 = P * self
-        for j in range(n):
-            L[j][j] = 1
-            for i in range(j + 1):
-                s1 = sum(U[k][j] * L[i][k] for k in range(i))
-                U[i][j] = A2[i][j] - s1
-            for i in range(j, n):
-                s2 = sum(U[k][j] * L[i][k] for k in range(j))
-                L[i][j] = (A2[i][j] - s2) / U[j][j]
-        return L, U
 
     def get_inverted(self):
         if self.row_n != self.col_n:
@@ -170,9 +142,10 @@ def mult_matrix_test():
 
 def lu_decomposition_test():
     m = Matrix([[1, 0, 2], [2, -1, 3], [4, 1, 8]])
-    L, U = m._get_LU()
+    L, U = m.get_lup_decomposition()
     LU = L * U
     print(m)
+    print(LU)
     print(L)
     print(U)
     for i in range(m.row_n):
