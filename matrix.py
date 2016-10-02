@@ -44,7 +44,7 @@ class Matrix(object):
 
     def __mul__(self, other):
         if self.col_n != other.row_n:
-            raise ValueError('Matrices do not fit shape condition')
+            raise ValueError('Matrices do not fit shape condition. {0} X {1}'.format(self.shape(), other.shape()))
         m = Matrix((self.row_n, other.col_n))
         for i in range(m.row_n):
             for j in range(m.col_n):
