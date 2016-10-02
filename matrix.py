@@ -12,9 +12,9 @@ class Matrix(object):
             if not isinstance(array[0], list):
                 self.row_n = len(array)
                 self.col_n = 1
-                self.rows = [[]] * self.row_n
+                self.rows = []
                 for i in range(self.row_n):
-                    self.rows[i].append(array[i])
+                    self.rows.append([array[i]])
             else:
                 n = len(array)
                 m = len(array[0])
