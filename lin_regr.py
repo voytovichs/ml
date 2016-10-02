@@ -1,4 +1,5 @@
 from math import sqrt
+from random import shuffle
 
 from matrix import Matrix
 
@@ -35,3 +36,17 @@ def read(file_path):
 
 def rmse(y, y_est):
     return sum([sqrt(abs(y[i] - y_est[i])) for i in range(len(y))]) / len(y)
+
+
+def split(X, y):
+    n = y.shape()[0]
+    for_test = shuffle([i % 2 == 0 for i in range(n)])
+    X_learn, X_test, y_learn, y_test = [], [], [], []
+    for i in range(n):
+        if for_test[i]:
+            X_test.append(X[i])
+            y_test.append(y[i])
+        else:
+            X_learn.append(X[i])
+            y_test.append(y[i])
+    return Matrix(X_learn), Matrix(X_test), Matrix(y_learn), Matrix(y_test)
