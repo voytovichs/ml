@@ -9,23 +9,18 @@ class Matrix(object):
                 self.rows.append([0] * self.col_n)
         else:
             array = init_data
-            n = len(array)
-            m = 0
-            if n != 0:
-                if isinstance(array[0], list):
-                    m = len(array[0])
-                else:
-                    m = 1
-            self.row_n = n
-            self.col_n = m
-            self.rows = []
-            if isinstance(array[0], list):
+            if not isinstance(array[0], list):
+                self.row_n = 1
+                self.col_n = len(array)
+                self.rows = array
+            else:
+                n = len(array)
+                m = len(array[0])
+                self.row_n = n
+                self.col_n = m
+                self.rows = []
                 for i in range(n):
                     self.rows.append(array[i][:])
-            else:
-                for i in range(n):
-                    self.rows.append(array[i])
-
 
     def __getitem__(self, index):
         return self.rows[index]
@@ -56,21 +51,6 @@ class Matrix(object):
                 m[i][j] = sum([self[i][k] * other[k][j] for k in range(len(self[i]))])
         return m
 
-    def get_transposed(self):
-        m = Matrix((self.col_n, self.row_n))
-        for i in range(self.row_n):
-            for j in range(self.col_n):
-                m[j][i] = self[i][j]
-        return m
-
-    def _get_identity_matrix(self):
-        if self.row_n != self.col_n:
-            raise ValueError("Cannot compute identity matrix for non-square shape")
-        m = Matrix((self.row_n, self.row_n))
-        for i in range(self.row_n):
-            m[i][i] = 1
-        return m
-
     def swap(self, i, j):
         tmp = self.rows[i]
         self.rows[i] = self.rows[j]
@@ -78,9 +58,9 @@ class Matrix(object):
         return self
 
     def shape(self):
-        return self.row_n, self.row_n
+        return self.row_n, self.col_n
 
-    def get_lu_decomposition(self):
+    def get_lup_decomposition(self):
         if self.row_n != self.col_n:
             raise ValueError('Cannot find LUP decomposition for non-square matrix')
         n = self.row_n
@@ -94,10 +74,10 @@ class Matrix(object):
                     k_p = i
             if p == 0:
                 raise ValueError('Cannot find LUP decomposition of singular matrix')
-            tmp = pi[i]
-            pi[i] = k_p
+            tmp = pi[k]
+            pi[k] = k_p
             pi[k_p] = tmp
-            lu.swap(i, k_p)
+            lu.swap(k, k_p)
             for i in range(k + 1, n):
                 lu[i][k] /= lu[k][k]
                 for j in range(k + 1, n):
@@ -113,12 +93,55 @@ class Matrix(object):
             for i in range(n):
                 for j in range(i):
                     U[i][j] = 0
+
             return L, U
+
+    def get_transposed(self):
+        m = Matrix((self.col_n, self.row_n))
+        for i in range(self.row_n):
+            for j in range(self.col_n):
+                m[j][i] = self[i][j]
+        return m
+
+    def _get_identity_matrix(self):
+        if self.row_n != self.col_n:
+            raise ValueError("Cannot compute identity matrix for non-square shape")
+        m = Matrix((self.row_n, self.row_n))
+        for i in range(self.row_n):
+            m[i][i] = 1
+        return m
+
+    def _pivotize(self):
+        ID = self._get_identity_matrix()
+        n = self.row_n
+        for j in range(n):
+            row = max(range(j, n), key=lambda i: abs(self[i][j]))
+            if j != row:
+                ID[j], ID[row] = ID[row], ID[j]
+        return ID
+
+    def _get_LU(self):
+        if self.row_n != self.col_n:
+            raise ValueError('Cannot find LU decomposition for non-square matrix')
+        n = self.row_n
+        L = self._get_identity_matrix()
+        U = Matrix((n, n))
+        P = self._pivotize()
+        A2 = P * self
+        for j in range(n):
+            L[j][j] = 1
+            for i in range(j + 1):
+                s1 = sum(U[k][j] * L[i][k] for k in range(i))
+                U[i][j] = A2[i][j] - s1
+            for i in range(j, n):
+                s2 = sum(U[k][j] * L[i][k] for k in range(j))
+                L[i][j] = (A2[i][j] - s2) / U[j][j]
+        return L, U
 
     def get_inverted(self):
         if self.row_n != self.col_n:
             raise ValueError('Non-square matrix cannot be inverted')
-        L, U = self._get_LU()
+        L, U = self.get_lup_decomposition()
         n = self.row_n
         R = self
         # Ly=I, forward substitution
@@ -134,7 +157,6 @@ class Matrix(object):
                 for j in range(n):
                     R[i][j] -= R[k][j] * U[i][k]
         return R
-
 
 def mult_matrix_test():
     m1 = Matrix([[1, 2, 3], [4, 5, 6]])
