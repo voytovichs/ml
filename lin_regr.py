@@ -40,7 +40,8 @@ def rmse(y, y_est):
 
 def split(X, y):
     n = y.shape()[0]
-    for_test = shuffle([i % 2 == 0 for i in range(n)])
+    for_test = [i % 2 == 0 for i in range(n)]
+    shuffle(for_test)
     X_learn, X_test, y_learn, y_test = [], [], [], []
     for i in range(n):
         if for_test[i]:
@@ -48,5 +49,5 @@ def split(X, y):
             y_test.append(y[i])
         else:
             X_learn.append(X[i])
-            y_test.append(y[i])
+            y_learn.append(y[i])
     return Matrix(X_learn), Matrix(X_test), Matrix(y_learn), Matrix(y_test)
