@@ -42,7 +42,7 @@ def mean(vec):
 def std(vec, mean=None):
     if not mean:
         mean = mean(vec)
-    return sum([(vec[i] - mean) ** 2 for i in range(len(vec))])
+    return sqrt(sum([(vec[i] - mean) ** 2 for i in range(len(vec))]) / len(vec))
 
 
 def rmse(y, y_est):
@@ -81,10 +81,10 @@ def cross_validation(X, y, repeat=1000):
 
 
 def scale(X):
+    X = X.get_transposed()
     for i in range(X.row_n):
         m = mean(X[i])
         s = std(X[i], m)
         for j in range(X.col_n):
-            X[i][j] -= m
-            X[i][j] /= s
-
+            X[i][j] = (X[i][j] - mean) / s
+    return X.get_transposed()
