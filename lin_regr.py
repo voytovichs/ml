@@ -47,7 +47,7 @@ def std(vec, mean=None):
 
 def rmse(y, y_est):
     n = y.row_n
-    return sqrt(sum([(y[i][0] - y_est[i] ** 2) for i in range(n)]) / n)
+    return sqrt(sum([((y[i][0] - y_est[i]) ** 2) for i in range(n)]) / n)
 
 
 def split(X, y):
@@ -88,11 +88,3 @@ def scale(X):
         for j in range(X.col_n):
             X[i][j] = (X[i][j] - m) / s
     return X.get_transposed()
-
-
-X, y = read('/Users/voytovichs/Code/ml/students.txt')
-
-X_Scaled = scale(X)
-err = cross_validation(X_Scaled, y)
-print(err)
-print(X)
