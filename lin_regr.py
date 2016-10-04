@@ -81,12 +81,17 @@ def cross_validation(X, y, repeat=1000):
 
 
 def scale(X):
-    X = X.get_transposed()
-    for i in range(X.row_n):
-        m = mean(X[i])
-        s = std(X[i], m)
-        for j in range(X.col_n):
-            X[i][j] = (X[i][j] - m) / s
-    return X.get_transposed()
+    for i in range(X.col_n):
+        col = [X[k][i] for k in range(X.row_n)]
+        m = mean(col)
+        s = std(col, m)
+        for j in range(X.row_n):
+            X[j][i] = (X[j][i] - m) / s
+
+
+def scale_y(y):
+    m = mean(list(map(lambda a: a[0], y.rows)))
+    for i in range(y.row_n):
+        y[i][0] -= m
 
 
