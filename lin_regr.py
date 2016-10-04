@@ -13,7 +13,7 @@ class LinRegr(object):
     def fit(self, X, y):
         self._fitted = True
         self._beta = (X.get_transposed() * X).get_inverted() * X.get_transposed() * y
-        self._beta0 = sum(map(lambda a: a[0], self._beta)) / self._beta.shape()[0]
+        self._beta0 = sum(map(lambda a: a[0], y)) / y.row_n
 
     def predict(self, X):
         if not self._fitted:
@@ -88,3 +88,5 @@ def scale(X):
         for j in range(X.col_n):
             X[i][j] = (X[i][j] - m) / s
     return X.get_transposed()
+
+
