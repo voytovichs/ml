@@ -132,7 +132,7 @@ class Matrix(object):
             b = [0] * n
             b[i] = 1
             inverted.append(self.lup_solve(L, U, pi, b))
-        return Matrix(inverted)
+        return Matrix(inverted).get_transposed()
 
 
 def mult_matrix_test():
