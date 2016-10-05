@@ -95,10 +95,7 @@ class Matrix(object):
         for i in range(n):
             for j in range(i):
                 U[i][j] = 0
-        P = Matrix((self.col_n, self.row_n))
-        for i in range(len(pi)):
-            P[i][pi[i]] = 1
-        return L, U, P
+        return L, U, pi
 
     def get_transposed(self):
         m = Matrix((self.col_n, self.row_n))
@@ -115,25 +112,28 @@ class Matrix(object):
             m[i][i] = 1
         return m
 
+    def lup_solve(self, L, U, pi, b):
+        n = self.row_n
+        y = [0] * n
+        x = [0] * n
+        for i in range(n):
+            y[i] = b[pi[i]] - sum([L[i][j] * y[j] for j in range(i)])
+        for i in range(n - 1, -1, -1):
+            x[i] = (y[i] - sum([U[i][j] * x[j] for j in range(i + 1, n)])) / U[i][i]
+        return x
+
     def get_inverted(self):
         if self.row_n != self.col_n:
             raise ValueError('Non-square matrix cannot be inverted')
-        L, U, P = self.get_lup_decomposition()
+        L, U, pi = self.get_lup_decomposition()
         n = self.row_n
-        R = Matrix(self.rows[:])
-        # Ly=I, forward substitution
-        for k in range(n):
-            for i in range(k + 1, n):
-                for j in range(n):
-                    R[i][j] -= R[k][j] * L[i][k]
-        # U*X=y, backward substitution
-        for k in range(n - 1, -1, -1):
-            for j in range(n):
-                R[k][j] /= U[k][k]
-            for i in range(k):
-                for j in range(n):
-                    R[i][j] -= R[k][j] * U[i][k]
-        return R
+        inverted = []
+        for i in range(n):
+            b = [0] * n
+            b[i] = 1
+            inverted.append(self.lup_solve(L, U, pi, b))
+        return Matrix(inverted)
+
 
 def mult_matrix_test():
     m1 = Matrix([[1, 2, 3], [4, 5, 6]])
@@ -147,12 +147,24 @@ def mult_matrix_test():
 
 def lu_decomposition_test():
     m = Matrix([[1, 0, 2], [2, -1, 3], [4, 1, 8]])
-    L, U, P = m.get_lup_decomposition()
+    L, U, pi = m.get_lup_decomposition()
+    P = Matrix((3, 3))
+    for i in range(len(pi)):
+        P[i][pi[i]] = 1
     LU = L * U
     Pm = P * m
     for i in range(m.row_n):
         for j in range(m.col_n):
             assert Pm[i][j] == LU[i][j], 'm[{0}][{1}](={2}) != LU[{0}][{1}](={3})'.format(i, j, m[i][j], LU[i][j])
+
+
+def lup_solve_test():
+    m = Matrix([[1, 2, 0], [3, 5, 4], [5, 6, 3]])
+    L, U, pi = m.get_lup_decomposition()
+    x = m.lup_solve(L, U, pi, [0.1, 12.5, 10.3])
+    x_expected = [0.5, -0.2, 3]
+    for i in range(len(x)):
+        assert abs(x[i] - x_expected[i]) < 0.001
 
 
 def inverted_matrix_test():
@@ -169,4 +181,5 @@ def inverted_matrix_test():
 
 mult_matrix_test()
 lu_decomposition_test()
+lup_solve_test()
 inverted_matrix_test()
