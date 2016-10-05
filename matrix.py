@@ -179,7 +179,7 @@ def inverted_matrix_test():
             else:
                 assert abs(I[i][j]) < 0.001, 'I[{0}][{1}] != 0 (=={2})'.format(i, j, I[i][j])
 
-mult_matrix_test()
-lu_decomposition_test()
-lup_solve_test()
-inverted_matrix_test()
+#mult_matrix_test()
+#lu_decomposition_test()
+#lup_solve_test()
+#inverted_matrix_test()
