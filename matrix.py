@@ -77,7 +77,7 @@ class Matrix(object):
             if p == 0:
                 raise ValueError('Cannot find LUP decomposition of singular matrix')
             tmp = pi[k]
-            pi[k] = k_p
+            pi[k] = pi[k_p]
             pi[k_p] = tmp
             lu.swap(k, k_p)
             for i in range(k + 1, n):
@@ -95,7 +95,10 @@ class Matrix(object):
         for i in range(n):
             for j in range(i):
                 U[i][j] = 0
-        return L, U
+        P = Matrix((self.col_n, self.row_n))
+        for i in range(len(pi)):
+            P[i][pi[i]] = 1
+        return L, U, P
 
     def get_transposed(self):
         m = Matrix((self.col_n, self.row_n))
@@ -115,9 +118,9 @@ class Matrix(object):
     def get_inverted(self):
         if self.row_n != self.col_n:
             raise ValueError('Non-square matrix cannot be inverted')
-        L, U = self.get_lup_decomposition()
+        L, U, P = self.get_lup_decomposition()
         n = self.row_n
-        R = self
+        R = Matrix(self.rows[:])
         # Ly=I, forward substitution
         for k in range(n):
             for i in range(k + 1, n):
@@ -144,16 +147,12 @@ def mult_matrix_test():
 
 def lu_decomposition_test():
     m = Matrix([[1, 0, 2], [2, -1, 3], [4, 1, 8]])
-    L, U = m.get_lup_decomposition()
+    L, U, P = m.get_lup_decomposition()
     LU = L * U
-    print(m)
-    print(LU)
-    print(L)
-    print(U)
+    Pm = P * m
     for i in range(m.row_n):
         for j in range(m.col_n):
-            # lines order may change, compare LU with m manually
-            assert m[i][j] == LU[i][j], 'm[{0}][{1}](={2}) != LU[{0}][{1}](={3})'.format(i, j, m[i][j], LU[i][j])
+            assert Pm[i][j] == LU[i][j], 'm[{0}][{1}](={2}) != LU[{0}][{1}](={3})'.format(i, j, m[i][j], LU[i][j])
 
 
 def inverted_matrix_test():
@@ -167,3 +166,7 @@ def inverted_matrix_test():
                 assert abs(I[i][j] - 1) < 0.001, 'I[{0}][{1}] != 1 (=={2})'.format(i, j, I[i][j])
             else:
                 assert abs(I[i][j]) < 0.001, 'I[{0}][{1}] != 0 (=={2})'.format(i, j, I[i][j])
+
+mult_matrix_test()
+lu_decomposition_test()
+inverted_matrix_test()
