@@ -100,7 +100,7 @@ def scale_y(y):
 
 
 X, y = read('/Users/voytovichs/Code/ml/students.txt')
-scale(X, skip_binary=True)
+scale(X, skip_binary=False)
 scale_y(y)
 prev_err = cross_validation(X, y)
 print('Result with all columns - {0}'.format(prev_err))
@@ -114,9 +114,10 @@ while True:
         if min > error[i]:
             min = error[i]
             min_index = i
-    print('Exluded {0} column gives {1} error'.format(min_index, min))
+    print('Excluding {0} column gives {1} error'.format(min_index, min))
     if min < prev_err:
         prev_err = min
+        X = X.get_with_exluded_column(min_index)
         print('Continue experiment')
     else:
         print('New error without {0} column was {1} which is greater than old {2}. Stopping.'
