@@ -122,6 +122,16 @@ class Matrix(object):
             x[i] = (y[i] - sum([U[i][j] * x[j] for j in range(i + 1, n)])) / U[i][i]
         return x
 
+    def get_column(self, i):
+        if i < 0 or i >= self.col_n:
+            raise ValueError('Column with number {} does not exists'.format(i))
+        return [self[j][i] for j in range(self.row_n)]
+
+    def get_with_exluded_column(self, i):
+        new_rows = self.get_transposed().rows
+        del(new_rows[i])
+        return Matrix(new_rows).get_transposed()
+
     def get_inverted(self):
         if self.row_n != self.col_n:
             raise ValueError('Non-square matrix cannot be inverted')
@@ -179,7 +189,7 @@ def inverted_matrix_test():
             else:
                 assert abs(I[i][j]) < 0.001, 'I[{0}][{1}] != 0 (=={2})'.format(i, j, I[i][j])
 
-#mult_matrix_test()
-#lu_decomposition_test()
-#lup_solve_test()
-#inverted_matrix_test()
+# mult_matrix_test()
+# lu_decomposition_test()
+# lup_solve_test()
+# inverted_matrix_test()

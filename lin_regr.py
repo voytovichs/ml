@@ -80,9 +80,13 @@ def cross_validation(X, y, repeat=1000):
     return error
 
 
-def scale(X):
+def scale(X, skip_binary=False):
     for i in range(X.col_n):
         col = [X[k][i] for k in range(X.row_n)]
+        if skip_binary:
+            for a in col:
+                if a != 0 and a != 1:
+                    continue
         m = mean(col)
         s = std(col, m)
         for j in range(X.row_n):
@@ -95,3 +99,26 @@ def scale_y(y):
         y[i][0] -= m
 
 
+X, y = read('/Users/voytovichs/Code/ml/students.txt')
+scale(X, skip_binary=True)
+scale_y(y)
+prev_err = cross_validation(X, y)
+print('Result with all columns - {0}'.format(prev_err))
+while True:
+    error = []
+    for i in range(X.col_n):
+        error.append(cross_validation(X.get_with_exluded_column(i), y))
+    min = error[0]
+    min_index = 0
+    for i in range(len(error)):
+        if min > error[i]:
+            min = error[i]
+            min_index = i
+    print('Exluded {0} column gives {1} error'.format(min_index, min))
+    if min < prev_err:
+        prev_err = min
+        print('Continue experiment')
+    else:
+        print('New error without {0} column was {1} which is greater than old {2}. Stopping.'
+              .format(min, min_index, prev_err))
+        break
