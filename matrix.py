@@ -132,6 +132,12 @@ class Matrix(object):
         del(new_rows[i])
         return Matrix(new_rows).get_transposed()
 
+    def get_with_excluded_columns(self, exclude):
+        new_rows = self.get_transposed().rows
+        for i in exclude:
+            del(new_rows[i])
+        return Matrix(new_rows).get_transposed()
+
     def get_inverted(self):
         if self.row_n != self.col_n:
             raise ValueError('Non-square matrix cannot be inverted')
