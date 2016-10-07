@@ -66,18 +66,23 @@ def split(X, y):
 
 
 def cross_validation(X, y, repeat=1000):
-    error = 0
+    err = 0
+    skipped = 0
+    succeded = 0
     for i in range(repeat):
         X_learn, X_Test, y_learn, y_test = split(X, y)
         try:
             regression = LinRegr()
             regression.fit(X_learn, y_learn)
             y_est = [regression.predict(X_Test[k]) for k in range(X_Test.row_n)]
-            error += rmse(y_test, y_est) / repeat
-        except:
+            err += rmse(y_test, y_est) / repeat
+            succeded += 1
+        except Exception:
             # singular matrix, ignore iteration
-            pass
-    return error
+            skipped+=1
+            continue
+    print('Skipped {0} iterations, succedded {1}'.format(skipped, succeded))
+    return err
 
 
 def scale(X, skip_binary=False):
@@ -87,10 +92,10 @@ def scale(X, skip_binary=False):
             for a in col:
                 if a != 0 and a != 1:
                     continue
-        m = mean(col)
-        s = std(col, m)
+        m_max = max(col)
+        m_min = min(col)
         for j in range(X.row_n):
-            X[j][i] = (X[j][i] - m) / s
+            X[j][i] = (X[j][i] - m_min) / (m_max - m_min)
 
 
 def scale_y(y):
@@ -102,26 +107,26 @@ def scale_y(y):
 X, y = read('/Users/voytovichs/Code/ml/students.txt')
 scale(X, skip_binary=True)
 scale_y(y)
+prev_err = cross_validation(X, y)
+print('Result with all columns - {0}'.format(prev_err))
 while False:
-    prev_err = cross_validation(X, y)
-    print('Result with all columns - {0}'.format(prev_err))
     error = []
     for i in range(X.col_n):
         error.append(cross_validation(X.get_with_exluded_column(i), y))
-    min = error[0]
+    _min = error[0]
     min_index = 0
     for i in range(len(error)):
-        if min > error[i]:
-            min = error[i]
+        if _min > error[i]:
+            _min = error[i]
             min_index = i
     print('Excluding column {0} gives {1} error'.format(min_index, min))
-    if min < prev_err:
-        prev_err = min
+    if _min < prev_err:
+        prev_err = _min
         X = X.get_with_exluded_column(min_index)
         print('Continue experiment')
     else:
         print('New error without {0} column was {1} which is greater than old {2}. Stopping.'
-              .format(min_index, min, prev_err))
+              .format(min_index, _min, prev_err))
         break
 # Excluding 7
 # Excluding 3
@@ -134,6 +139,4 @@ while False:
 # Excluding 0
 exclude = [7, 3, 6, 6, 6, 0, 5, 2, 0]
 X = X.get_with_excluded_columns(exclude)
-regr = LinRegr()
-regr.fit(X, y)
-print(regr._beta)
+print(cross_validation(X, y))
