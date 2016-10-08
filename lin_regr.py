@@ -68,20 +68,24 @@ def split(X, y):
 def cross_validation(X, y, repeat=1000):
     err = 0
     skipped = 0
-    succeded = 0
+    succeeded = 0
     for i in range(repeat):
         X_learn, X_Test, y_learn, y_test = split(X, y)
         try:
             regression = LinRegr()
             regression.fit(X_learn, y_learn)
             y_est = [regression.predict(X_Test[k]) for k in range(X_Test.row_n)]
-            err += rmse(y_test, y_est) / repeat
-            succeded += 1
+            new_err = rmse(y_test, y_est) / repeat
+            if new_err > 50:
+                print('Huge error {0}, skip iteration'.format(new_err))
+            else:
+                err += new_err
+            succeeded += 1
         except Exception:
             # singular matrix, ignore iteration
-            skipped+=1
+            skipped += 1
             continue
-    print('Skipped {0} iterations, succedded {1}'.format(skipped, succeded))
+    print('Skipped {0} iterations, succedded {1}'.format(skipped, succeeded))
     return err
 
 
@@ -119,7 +123,7 @@ while False:
         if _min > error[i]:
             _min = error[i]
             min_index = i
-    print('Excluding column {0} gives {1} error'.format(min_index, min))
+    print('Excluding column {0} gives {1} error'.format(min_index, _min))
     if _min < prev_err:
         prev_err = _min
         X = X.get_with_exluded_column(min_index)
@@ -128,15 +132,16 @@ while False:
         print('New error without {0} column was {1} which is greater than old {2}. Stopping.'
               .format(min_index, _min, prev_err))
         break
-# Excluding 7
-# Excluding 3
-# Excluding 6
-# Excluding 6
-# Excluding 6
-# Excluding 0
-# Excluding 5
-# Excluding 2
-# Excluding 0
-exclude = [7, 3, 6, 6, 6, 0, 5, 2, 0]
+# Excluding column 7 gives 4.36924600085931 error
+# Excluding column 9 gives 3.365243424196011 error
+# Excluding column 7 gives 2.8821635633293834 error
+# Excluding column 0 gives 2.4088621131679666 error
+# Excluding column 7 gives 2.1602404740368053 error
+# Excluding column 6 gives 2.0034290996177577 error
+# Excluding column 3 gives 1.8583080014552404 error
+# Excluding column 0 gives 1.7879822077737186 error
+# Excluding column 1 gives 1.676595284400759 error
+exclude = [7, 9, 7, 0, 7, 6, 3, 0, 1]
 X = X.get_with_excluded_columns(exclude)
-print(cross_validation(X, y))
+err = cross_validation(X, y)
+print('Final result = {0}'.format(err))
