@@ -42,7 +42,8 @@ def mean(vec):
 def std(vec, mean=None):
     if not mean:
         mean = mean(vec)
-    return sqrt(sum([(vec[i] - mean) ** 2 for i in range(len(vec))]) / len(vec))
+    s = sum([(vec[i] - mean) ** 2 for i in range(len(vec))])
+    return sqrt(s / len(vec))
 
 
 def rmse(y, y_est):
@@ -129,7 +130,7 @@ while False:
         X = X.get_with_exluded_column(min_index)
         print('Continue experiment')
     else:
-        print('New error without {0} column was {1} which is greater than old {2}. Stopping.'
+        print('New error was {1} which is greater than old {2}.'
               .format(min_index, _min, prev_err))
         break
 # Excluding column 7 gives 4.36924600085931 error
