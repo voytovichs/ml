@@ -55,4 +55,4 @@ def read(path):
 
 
 def write(path, data):
-    np.savetxt(path, data, header='id,target', delimiter=',')
+    np.savetxt(path, data, header='id,target', delimiter=',', comments='')
