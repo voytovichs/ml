@@ -39,7 +39,7 @@ def split(X, y, seventy_five=False):
             X_test.append([X[i, k] for k in range(col)])
             y_test.append(y[i])
         else:
-            X_test.append([X[i, k] for k in range(col)])
+            X_learn.append([X[i, k] for k in range(col)])
             y_learn.append(y[i])
     return np.matrix(X_learn), np.matrix(X_test), np.array(y_learn), np.array(y_test)
 
