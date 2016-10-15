@@ -1,5 +1,7 @@
 from random import shuffle, random
 
+import os
+
 import numpy as np
 import numpy.linalg as la
 
@@ -88,7 +90,17 @@ def read_y(path):
 
 
 def write(path, data):
-    np.savetxt(path, data, header='id,target', delimiter=',', comments='')
+    tmp = 'haha.csv'
+    ids = [i + 336 for i in range(len(data))]
+    np.savetxt(tmp, data, fmt='%.15f', header='id,target', delimiter=',', comments='')
+    lines = []
+    with open(tmp, 'r') as file:
+        lines = file.readlines()
+    os.remove(tmp)
+    for i in range(1, len(lines)):
+        lines[i] = '{0},{1}'.format(ids[i - 1], lines[i])
+    with open(path, 'w') as file:
+        file.writelines(lines)
 
 
 def exclude_row(X, *args):
@@ -113,10 +125,11 @@ def cv(X, y, times=1000):
 
 X = read_x('learn.csv')
 y = read_y('learn.csv')
-#print(cv(X, y))
+X_test = read_x('test.csv', exclude_y=False)
+scaled = scale(np.concatenate((X, X_test)))
+X_scaled, X_t_scaled = np.vsplit(scaled, [len(y)])
 
 r = Regr()
-r.fit(exclude_col(scale(X), [i + 20 for i in range(100)]), y)
-X_test = read_x('test.csv', exclude_y=False)
-y_test = r.predict(exclude_col(X_test, [i + 20 for i in range(100)]))
+r.fit(X_scaled, y)
+y_test = r.predict(X_t_scaled)
 write('answer.csv', y_test)
