@@ -12,7 +12,7 @@ class Regr(object):
 
     def fit(self, X, y, mean_int=True):
         self._fitted = True
-        self._beta = la.inv(X.transpose().dot(X)).dot(X.transpose()).dot(y)
+        self._beta = (y - y.mean()) * (la.inv(X * X.transpose()).dot(X))
         if mean_int:
             self._beta0 = y.mean()
         else:
@@ -21,10 +21,9 @@ class Regr(object):
     def predict(self, X):
         if not self._fitted:
             raise RuntimeError('Fit regression before predicting')
-        y = self._beta.dot(X.transpose()) + self._beta0
+        y = self._beta * X.T + self._beta0
         arr = [y[0, i] for i in range(y.shape[1])]
         return np.array(arr)
-
 
 def split(X, y, seventy_five=False):
     row, col = X.shape
@@ -65,11 +64,13 @@ def rmse(y, y_est):
 
 def scale(X):
     scaled = []
-    for i in range(X.shape[1]):
+    _, col = X.shape
+    for i in range(col):
         col = X[:, i]
+        col_len = col.shape[0]
         mean = col.mean()
         std = col.std()
-        scaled.append([(col[i] - mean) / std for i in range(len(col))])
+        scaled.append([(col[k] - mean) / std for k in range(col_len)])
     return np.matrix(scaled).transpose()
 
 
@@ -98,15 +99,15 @@ def exclude_col(X, *args):
 
 
 def cv(X, y, times=1000):
-    err = 0
-    X = scale(X)
-    X, X_t, y, y_t = split(X, y)
+    err = np.zeros(times)
+    X_sc = scale(X)
+    X_l, X_t, y_l, y_t = split(X_sc, y)
     for i in range(times):
         r = Regr()
-        r.fit(X, y)
+        r.fit(X_l, y_l)
         y_est = r.predict(X_t)
-        err += rmse(y_t, y_est)
-    return err / times
+        err[i] = rmse(y_t, y_est)
+    return err.mean()
 
 
 X = read_x('learn.csv')
