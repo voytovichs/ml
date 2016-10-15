@@ -10,10 +10,13 @@ class Regr(object):
         self._beta = None
         self._beta0 = None
 
-    def fit(self, X, y):
+    def fit(self, X, y, mean_int=True):
         self._fitted = True
         self._beta = la.inv(X.transpose().dot(X)).dot(X.transpose).dot(y)
-        self._beta0 = sum(map(lambda a: a[0], y)) / y.row_n
+        if mean_int:
+            self._beta0 = sum(map(lambda a: a[0], y)) / y.row_n
+        else:
+            self._beta0 = 1
 
     def predict(self, X):
         if not self._fitted:
@@ -51,8 +54,17 @@ def scale(X):
 
 
 def read(path):
-    return np.genfromtxt(path, delimiter=',', skip_header=True)
+    data = np.genfromtxt(path, delimiter=',', skip_header=True)
+    return exclude_col(data, 0)  # get rid of id's
 
 
 def write(path, data):
     np.savetxt(path, data, header='id,target', delimiter=',', comments='')
+
+
+def exclude_row(X, *args):
+    return np.delete(X, args, axis=0)
+
+
+def exclude_col(X, *args):
+    return np.delete(X, args, axis=1)
