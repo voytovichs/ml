@@ -49,3 +49,10 @@ def scale(X):
         scaled.append([(col[i, 0] - mean) / std for i in range(len(col))])
     return np.matrix(scaled).transpose()
 
+
+def read(path):
+    return np.genfromtxt(path, delimiter=',', skip_header=True)
+
+
+def write(path, data):
+    np.savetxt(path, data, header='id,target', delimiter=',')
