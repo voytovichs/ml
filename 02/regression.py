@@ -74,10 +74,11 @@ def scale(X):
     return np.matrix(scaled).transpose()
 
 
-def read_x(path):
+def read_x(path, exclude_y=True):
     data = np.genfromtxt(path, delimiter=',', skip_header=True)
     _row, col = data.shape
-    return exclude_col(data, 0, col - 1)  # get rid of id's and y
+    sub = 1 if exclude_y else 0
+    return exclude_col(data, 0, col - sub)  # get rid of id's and y
 
 
 def read_y(path):
@@ -112,4 +113,10 @@ def cv(X, y, times=1000):
 
 X = read_x('learn.csv')
 y = read_y('learn.csv')
-print(cv(X, y))
+#print(cv(X, y))
+
+r = Regr()
+r.fit(exclude_col(scale(X), [i + 20 for i in range(100)]), y)
+X_test = read_x('test.csv', exclude_y=False)
+y_test = r.predict(exclude_col(X_test, [i + 20 for i in range(100)]))
+write('answer.csv', y_test)
