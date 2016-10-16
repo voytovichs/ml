@@ -119,6 +119,7 @@ def cv(X, y, times=300):
         err[i] = rmse(y_t, y_est)
     return err.mean()
 
+
 def get_mean_and_std(x):
     mean = []
     std = []
@@ -127,14 +128,30 @@ def get_mean_and_std(x):
         std.append(row.std())
     return mean, std
 
+
+def get_rid_of_outliers(x, y, mean, std, m=3):
+    to_delete = set()
+    row, col = x.shape
+    for c in range(col):
+        for r in range(row):
+            if abs(x[r, c] - mean[c]) >= m * std[c]:
+                to_delete.add(r)
+    print('{0} rows has outline values'.format(len(to_delete)))
+    return exclude_row(x, *to_delete), exclude_row(y, *to_delete)
+
+
 X = read_x('learn.csv')
 y = read_y('learn.csv')
 X_test = read_x('test.csv', exclude_y=False)
 learn_mean, learn_std = get_mean_and_std(X)
 X_learn_scaled = scale(X, learn_mean, learn_std)
 
+#make it after feature selection
+x_learn_scaled_cleaned, y_cleaned = get_rid_of_outliers(X_learn_scaled, y, learn_mean, learn_std, m=15)
+#print(cv(x_learn_scaled_cleaned, y_cleaned))
 X_test_scaled = scale(X_test, learn_mean, learn_std)
 r = Regr()
-r.fit(exclude_row(X_learn_scaled, [i for i in range(100)]), exclude_row(y, [i for i in range(100)]))
+r.fit(x_learn_scaled_cleaned, y_cleaned)
 y_test = r.predict(X_test_scaled)
 write('answer.csv', y_test)
+
