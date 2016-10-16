@@ -1,5 +1,4 @@
 from random import shuffle, random
-
 import os
 
 import numpy as np
@@ -26,6 +25,7 @@ class Regr(object):
         y = self._beta * X.T + self._beta0
         arr = [y[0, i] for i in range(y.shape[1])]
         return np.array(arr)
+
 
 def split(X, y, seventy_five=False):
     row, col = X.shape
@@ -64,15 +64,13 @@ def rmse(y, y_est):
     return np.sqrt(np.mean(((y - y_est) ** 2)))
 
 
-def scale(X):
+def scale(X, mean, std):
     scaled = []
     _, col = X.shape
     for i in range(col):
         col = X[:, i]
         col_len = col.shape[0]
-        mean = col.mean()
-        std = col.std()
-        scaled.append([(col[k] - mean) / std for k in range(col_len)])
+        scaled.append([(col[k] - mean[i]) / std[i] for k in range(col_len)])
     return np.matrix(scaled).transpose()
 
 
@@ -111,10 +109,9 @@ def exclude_col(X, *args):
     return np.delete(X, args, axis=1)
 
 
-def cv(X, y, times=1000):
+def cv(X, y, times=300):
     err = np.zeros(times)
-    X_sc = scale(X)
-    X_l, X_t, y_l, y_t = split(X_sc, y)
+    X_l, X_t, y_l, y_t = split(X, y)
     for i in range(times):
         r = Regr()
         r.fit(X_l, y_l)
@@ -122,14 +119,22 @@ def cv(X, y, times=1000):
         err[i] = rmse(y_t, y_est)
     return err.mean()
 
+def get_mean_and_std(x):
+    mean = []
+    std = []
+    for row in x.transpose():
+        mean.append(row.mean())
+        std.append(row.std())
+    return mean, std
 
 X = read_x('learn.csv')
 y = read_y('learn.csv')
 X_test = read_x('test.csv', exclude_y=False)
-scaled = scale(np.concatenate((X, X_test)))
-X_scaled, X_t_scaled = np.vsplit(scaled, [len(y)])
+learn_mean, learn_std = get_mean_and_std(X)
+X_learn_scaled = scale(X, learn_mean, learn_std)
 
+X_test_scaled = scale(X_test, learn_mean, learn_std)
 r = Regr()
-r.fit(X_scaled, y)
-y_test = r.predict(X_t_scaled)
+r.fit(exclude_row(X_learn_scaled, [i for i in range(100)]), exclude_row(y, [i for i in range(100)]))
+y_test = r.predict(X_test_scaled)
 write('answer.csv', y_test)
