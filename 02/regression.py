@@ -1,5 +1,5 @@
-from random import shuffle, random
 import os
+from random import shuffle, random
 
 import numpy as np
 import numpy.linalg as la
@@ -136,8 +136,33 @@ def get_rid_of_outliers(x, y, mean, std, m=3):
         for r in range(row):
             if abs(x[r, c] - mean[c]) >= m * std[c]:
                 to_delete.add(r)
-    print('{0} rows has outline values'.format(len(to_delete)))
+    print('{0} rows have outline values'.format(len(to_delete)))
     return exclude_row(x, *to_delete), exclude_row(y, *to_delete)
+
+
+def get_betas(X, y, n=50):
+    betas = []
+    for i in range(n):
+        X_learn, _, y_learn, _ = split(X, y)
+        r = Regr()
+        r.fit(X_learn, y_learn)
+        betas.append([r._beta[0, i] for i in range(r._beta.shape[1])])
+    return np.matrix(betas)
+
+
+def get_rid_of_variative_features(X, X_test=None, *, y, threshold=1.5):
+    betas = get_betas(X, y)
+    tr = betas.T
+    var = [tr[i].std() for i in range(tr.shape[0])]
+    to_delete = []
+    for i in range(len(var)):
+        if var[i] > threshold:
+            to_delete.append(i)
+    print('{0} columns B have coef variance > {1}'.format(len(to_delete), threshold))
+    if X_test is None:
+        return exclude_col(X, to_delete)
+    else:
+        return exclude_col(X, to_delete), exclude_col(X_test, to_delete)
 
 
 X = read_x('learn.csv')
@@ -145,13 +170,14 @@ y = read_y('learn.csv')
 X_test = read_x('test.csv', exclude_y=False)
 learn_mean, learn_std = get_mean_and_std(X)
 X_learn_scaled = scale(X, learn_mean, learn_std)
+X_learn_scaled_filtered, X_test_filtered = get_rid_of_variative_features(X_learn_scaled, X_test, y=y)
+x_learn_scaled_filtered_cleaned, y_cleaned = get_rid_of_outliers(X_learn_scaled_filtered, y, learn_mean, learn_std,
+                                                                 m=20)
 
-#make it after feature selection
-x_learn_scaled_cleaned, y_cleaned = get_rid_of_outliers(X_learn_scaled, y, learn_mean, learn_std, m=15)
-#print(cv(x_learn_scaled_cleaned, y_cleaned))
-X_test_scaled = scale(X_test, learn_mean, learn_std)
+# print(cv(X_learn_scaled, y_cleaned))
+
+X_test_filtered_scaled = scale(X_test_filtered, learn_mean, learn_std)
 r = Regr()
-r.fit(x_learn_scaled_cleaned, y_cleaned)
-y_test = r.predict(X_test_scaled)
+r.fit(x_learn_scaled_filtered_cleaned, y_cleaned)
+y_test = r.predict(X_test_filtered_scaled)
 write('answer.csv', y_test)
-
