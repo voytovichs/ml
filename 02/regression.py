@@ -212,7 +212,7 @@ y = read_y('learn.csv')
 X_test = read_x('test.csv', exclude_y=False)
 learn_mean, learn_std = get_mean_and_std(X)
 X_learn_scaled = scale(X, learn_mean, learn_std)
-keep = forward_selection(X_learn_scaled, y, fine=50, times=500)
+keep = forward_selection(X_learn_scaled, y, fine=10, times=500)
 X_learn_scaled_col = exclude_col_except(X, *keep)
 X_test_col = exclude_col_except(X_test, *keep)
 
