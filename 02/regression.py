@@ -1,5 +1,5 @@
-from random import shuffle, random
 import os
+from random import shuffle, random, choice
 
 import numpy as np
 import numpy.linalg as la
@@ -13,7 +13,7 @@ class Regr(object):
 
     def fit(self, X, y, mean_int=True):
         self._fitted = True
-        self._beta = (y - y.mean()) * (la.inv(X * X.transpose()).dot(X))
+        self._beta = (y - y.mean()).dot((la.inv(X.dot(X.transpose())).dot(X)))
         if mean_int:
             self._beta0 = y.mean()
         else:
@@ -109,7 +109,7 @@ def exclude_col(X, *args):
     return np.delete(X, args, axis=1)
 
 
-def cv(X, y, times=300):
+def cv(X, y, times=1000):
     err = np.zeros(times)
     X_l, X_t, y_l, y_t = split(X, y)
     for i in range(times):
@@ -140,18 +140,86 @@ def get_rid_of_outliers(x, y, mean, std, m=3):
     return exclude_row(x, *to_delete), exclude_row(y, *to_delete)
 
 
+def correlation(a, b):
+    a_mean = a.mean()
+    b_mean = b.mean()
+    n = len(b)
+    cov = sum([(a[0, i] - a_mean) * (b[i] - b_mean) for i in range(n)])
+    return cov / (a.std() * b.std() * n)
+
+
+def max_corr_index(X, y):
+    best = 0
+    second_i = -1
+    third_i = -1
+    i = -1
+    curr = 0
+    for col in X.T:
+        corr = correlation(col, y)
+        if corr > best:
+            third_i = second_i
+            second_i = i
+            best = corr
+            i = curr
+        curr += 1
+    return i, second_i, third_i
+
+
+def exclude_col_except(X, *exc):
+    row, col = X.shape
+    to_delete = set(i for i in range(col)).difference(exc)
+    return exclude_col(X, *to_delete)
+
+
+def add_column(X, col):
+    return np.vstack((X.T, col)).T
+
+
+def forward_selection(X, y, fine=0, times=500):
+    best, second, third = max_corr_index(X, y)
+    selected = set()
+    selected.add(best)
+    selected.add(second)
+    selected.add(third)
+    X_to_learn = exclude_col_except(X, best, second, third)
+    err = 100000000000000
+    new_err = cv(X_to_learn, y, times=times)
+    while new_err < err or fine > 0:
+        err = new_err
+        ind = -1
+        min_ind = -1
+        for col in X.T:
+            ind += 1
+            if ind in selected:
+                continue
+            cur_err = cv(add_column(X_to_learn, col), y, times=times)
+            if cur_err < new_err:
+                new_err = cur_err
+                min_ind = ind
+        if min_ind != -1:
+            selected.add(min_ind)
+            X_to_learn = add_column(X_to_learn, X.T[min_ind])
+        elif fine > 0:
+            fine -= 1
+            rand = choice(list(set(range(X.shape[1])).difference(selected)))
+            selected.add(rand)
+            X_to_learn = add_column(X_to_learn, X.T[rand])
+    return selected
+
+
 X = read_x('learn.csv')
 y = read_y('learn.csv')
 X_test = read_x('test.csv', exclude_y=False)
 learn_mean, learn_std = get_mean_and_std(X)
 X_learn_scaled = scale(X, learn_mean, learn_std)
+keep = forward_selection(X_learn_scaled, y, fine=50, times=500)
+X_learn_scaled_col = exclude_col_except(X, *keep)
+X_test_col = exclude_col_except(X_test, *keep)
 
-#make it after feature selection
-x_learn_scaled_cleaned, y_cleaned = get_rid_of_outliers(X_learn_scaled, y, learn_mean, learn_std, m=15)
-#print(cv(x_learn_scaled_cleaned, y_cleaned))
-X_test_scaled = scale(X_test, learn_mean, learn_std)
+X_learn_scaled_col_row, y_row = get_rid_of_outliers(X_learn_scaled_col, y, learn_mean, learn_std, m=25)
+X_test_col_scaled = scale(X_test_col, learn_mean, learn_std)
 r = Regr()
-r.fit(x_learn_scaled_cleaned, y_cleaned)
-y_test = r.predict(X_test_scaled)
+r.fit(X_learn_scaled_col_row, y_row)
+y_test = r.predict(X_test_col_scaled)
 write('answer.csv', y_test)
-
+cv(X_learn_scaled_col_row, y_row)
