@@ -197,13 +197,16 @@ def forward_selection(X, y, fine=0, times=500):
                 new_err = cur_err
                 min_ind = ind
         if min_ind != -1:
+            print('Select by min index')
             selected.add(min_ind)
             X_to_learn = add_column(X_to_learn, X.T[min_ind])
         elif fine > 0:
+            print('Select by fine parameter')
             fine -= 1
             rand = choice(list(set(range(X.shape[1])).difference(selected)))
             selected.add(rand)
             X_to_learn = add_column(X_to_learn, X.T[rand])
+        print('Slected {}'.format(len(selected)))
     return selected
 
 
@@ -212,11 +215,11 @@ y = read_y('learn.csv')
 X_test = read_x('test.csv', exclude_y=False)
 learn_mean, learn_std = get_mean_and_std(X)
 X_learn_scaled = scale(X, learn_mean, learn_std)
-keep = forward_selection(X_learn_scaled, y, fine=10, times=500)
+keep = forward_selection(X_learn_scaled, y, fine=50, times=200)
 X_learn_scaled_col = exclude_col_except(X, *keep)
 X_test_col = exclude_col_except(X_test, *keep)
 
-X_learn_scaled_col_row, y_row = get_rid_of_outliers(X_learn_scaled_col, y, learn_mean, learn_std, m=25)
+X_learn_scaled_col_row, y_row = X_learn_scaled_col, y #get_rid_of_outliers(X_learn_scaled_col, y, learn_mean, learn_std, m=40)
 X_test_col_scaled = scale(X_test_col, learn_mean, learn_std)
 r = Regr()
 r.fit(X_learn_scaled_col_row, y_row)
