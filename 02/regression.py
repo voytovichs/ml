@@ -32,7 +32,7 @@ def split(X, y, seventy_five=False):
     for_test = [i % 2 == 0 for i in range(row)]
     if seventy_five:
         # learn 75 / test 25
-        for_test = list(map(lambda a: random.choice(0, 1) if a else a, for_test))
+        for_test = list(map(lambda a: choice(0, 1) if a else a, for_test))
     shuffle(for_test)
     X_learn, X_test, y_learn, y_test = [], [], [], []
     for i in range(row):
@@ -111,7 +111,7 @@ def exclude_col(X, *args):
 
 def cv(X, y, times=1000, log=False):
     err = np.zeros(times)
-    X_l, X_t, y_l, y_t = split(X, y, seventy_five=True)
+    X_l, X_t, y_l, y_t = split(X, y, seventy_five=False)
     for i in range(times):
         r = Regr()
         r.fit(X_l, y_l)
@@ -195,7 +195,7 @@ def forward_selection(X, y, fine=0, min_col=100, times=500):
             ind += 1
             if ind in selected:
                 continue
-            cur_err = cv(add_column(X_to_learn, col), y, times=times)
+            cur_err = cv(add_column(X_to_learn, col), y, times=times, log=False)
             if cur_err < new_err:
                 new_err = cur_err
                 min_ind = ind
@@ -213,7 +213,7 @@ learn_mean, learn_std = get_mean_and_std(X)
 X_learn_scaled = scale(X, learn_mean, learn_std)
 X_learn_scaled_row, y_row = get_rid_of_outliers(X_learn_scaled, y, learn_mean, learn_std, m=25)
 
-keep = forward_selection(X_learn_scaled_row, y_row, min_col=150, times=100)
+keep = forward_selection(X_learn_scaled_row, y_row, min_col=150, times=200)
 X_learn_scaled_row_col = exclude_col_except(X_learn_scaled_row, *keep)
 X_test_col = exclude_col_except(X_test, *keep)
 
