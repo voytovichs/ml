@@ -213,7 +213,7 @@ learn_mean, learn_std = get_mean_and_std(X)
 X_learn_scaled = scale(X, learn_mean, learn_std)
 X_learn_scaled_row, y_row = get_rid_of_outliers(X_learn_scaled, y, learn_mean, learn_std, m=25)
 
-keep = forward_selection(X_learn_scaled_row, y_row, min_col=30, times=100)
+keep = forward_selection(X_learn_scaled_row, y_row, min_col=150, times=100)
 X_learn_scaled_row_col = exclude_col_except(X_learn_scaled_row, *keep)
 X_test_col = exclude_col_except(X_test, *keep)
 
