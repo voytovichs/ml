@@ -1,5 +1,5 @@
 import os
-from random import shuffle, random, choice
+from random import shuffle
 
 import numpy as np
 import numpy.linalg as la
@@ -32,7 +32,7 @@ def split(X, y, seventy_five=False):
     for_test = [i % 2 == 0 for i in range(row)]
     if seventy_five:
         # learn 75 / test 25
-        for_test = list(map(lambda a: choice(0, 1) if a else a, for_test))
+        for_test = list(map(lambda a: np.random.choice([0, 1]) if a else a, for_test))
     shuffle(for_test)
     X_learn, X_test, y_learn, y_test = [], [], [], []
     for i in range(row):
@@ -109,10 +109,10 @@ def exclude_col(X, *args):
     return np.delete(X, args, axis=1)
 
 
-def cv(X, y, times=1000, log=False):
-    err = np.zeros(times)
+def cv(X, y, iterations=1000, log=False):
+    err = np.zeros(iterations)
     X_l, X_t, y_l, y_t = split(X, y, seventy_five=False)
-    for i in range(times):
+    for i in range(iterations):
         r = Regr()
         r.fit(X_l, y_l)
         y_est = r.predict(X_t)
@@ -177,7 +177,7 @@ def add_column(X, col):
     return np.vstack((X.T, col)).T
 
 
-def forward_selection(X, y, fine=0, min_col=100, times=500):
+def forward_selection(X, y, fine=0, min_col=100, cv_it=500):
     best, second, third = max_corr_index(X, y)
     selected = set()
     selected.add(best)
@@ -185,8 +185,8 @@ def forward_selection(X, y, fine=0, min_col=100, times=500):
     selected.add(third)
     X_to_learn = exclude_col_except(X, best, second, third)
     err = 100000000000000
-    new_err = cv(X_to_learn, y, times=times)
-    while new_err < err or err > 50 and len(selected) < min_col:
+    new_err = cv(X_to_learn, y, iterations=cv_it)
+    while new_err < err or err > 3 and len(selected) < min_col:
         err = new_err
         new_err = 100000000000000
         ind = -1
@@ -195,7 +195,7 @@ def forward_selection(X, y, fine=0, min_col=100, times=500):
             ind += 1
             if ind in selected:
                 continue
-            cur_err = cv(add_column(X_to_learn, col), y, times=times, log=False)
+            cur_err = cv(add_column(X_to_learn, col), y, iterations=cv_it, log=False)
             if cur_err < new_err:
                 new_err = cur_err
                 min_ind = ind
@@ -203,23 +203,48 @@ def forward_selection(X, y, fine=0, min_col=100, times=500):
             selected.add(min_ind)
             X_to_learn = add_column(X_to_learn, X.T[min_ind])
         print('Error on new iteration {}'.format(err))
+    print('Select {0} columns'.format(len(selected)))
+    print(selected)
     return selected
+
 
 
 X = read_x('learn.csv')
 y = read_y('learn.csv')
+learn_mean, learn_std = get_mean_and_std(X)
+
+X_learn_scaled = scale(X, learn_mean, learn_std)
+X_learn_scaled_row, y_row = get_rid_of_outliers(X_learn_scaled, y, learn_mean, learn_std, m=15)
+
 X_test = read_x('test.csv', exclude_y=False)
+X_test_scaled = scale(X_test, learn_mean, learn_std)
+
+keep = [0, 1, 3, 4, 5, 6, 7, 8, 9, 12, 13, 14, 15, 17, 19, 20, 23, 24, 25, 26, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 40, 41, 43, 44, 46, 48, 49, 50, 51, 52, 53, 54, 55, 56, 59, 61, 62, 63, 64, 68, 69, 70, 72, 73, 74, 75, 76, 77, 78, 79, 81, 82, 83, 84, 85, 87, 89, 90, 91, 92, 93, 94, 95, 96, 97, 100, 101, 102, 103, 104, 106, 107, 108, 109, 110, 111, 112, 114, 116, 117, 118, 119, 120, 122, 123, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 139, 141, 144, 145, 146, 148, 149, 150, 152, 153, 154, 155, 157, 158, 159, 160, 161, 162, 166, 167, 168, 169, 170, 173, 174, 176, 178, 179, 180, 181, 182, 183, 185, 186, 187, 189, 190, 191, 192, 194, 195, 196, 197, 198]
+X_learn_scaled_row_col = exclude_col_except(X_learn_scaled_row, *keep)
+X_test_col = exclude_col_except(X_test_scaled, *keep)
+print(cv(X_learn_scaled_row_col, y_row, iterations=500))
+r = Regr()
+r.fit(X_learn_scaled_row_col, y_row)
+y_test = r.predict(X_test_col)
+write('answer.csv', y_test)
+
+
+'''
 learn_mean, learn_std = get_mean_and_std(X)
 X_learn_scaled = scale(X, learn_mean, learn_std)
 X_learn_scaled_row, y_row = get_rid_of_outliers(X_learn_scaled, y, learn_mean, learn_std, m=25)
 
-keep = forward_selection(X_learn_scaled_row, y_row, min_col=150, times=200)
+keep = forward_selection(X_learn_scaled_row, y_row, min_col=170, cv_it=5)
 X_learn_scaled_row_col = exclude_col_except(X_learn_scaled_row, *keep)
+
+X_test = read_x('test.csv', exclude_y=False)
+X_test_col_scaled = scale(X_test_col, learn_mean, learn_std)
 X_test_col = exclude_col_except(X_test, *keep)
 
-X_test_col_scaled = scale(X_test_col, learn_mean, learn_std)
 r = Regr()
 r.fit(X_learn_scaled_row_col, y_row)
 y_test = r.predict(X_test_col_scaled)
 write('answer.csv', y_test)
-print(cv(X_learn_scaled_row_col, y_row, times=500))
+print(cv(X_learn_scaled_row_col, y_row, iterations=500))
+
+'''
