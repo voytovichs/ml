@@ -3,8 +3,6 @@ from random import shuffle
 
 import numpy as np
 import numpy.linalg as la
-import sys
-
 
 class Regr(object):
     def __init__(self):
@@ -31,9 +29,6 @@ class Regr(object):
 def split(X, y, seventy_five=False):
     row, col = X.shape
     for_test = [i % 2 == 0 for i in range(row)]
-    if seventy_five:
-        # learn 75 / test 25
-        for_test = list(map(lambda a: np.random.choice([False, True]) if a else a, for_test))
     shuffle(for_test)
     X_learn, X_test, y_learn, y_test = [], [], [], []
     for i in range(row):
@@ -44,21 +39,6 @@ def split(X, y, seventy_five=False):
             X_learn.append([X[i, k] for k in range(col)])
             y_learn.append(y[i])
     return np.matrix(X_learn), np.matrix(X_test), np.array(y_learn), np.array(y_test)
-
-
-def split_rep(X, y):
-    pass
-
-
-def split_k_fold(X, y, k):
-    n = len(y)
-    variance = [i % k for i in range(n)]
-    folds_x = [[] for i in range(k)]
-    folds_y = [[] for i in range(k)]
-    for i in range(len(variance)):
-        folds_x[variance[i]].append(X[i])
-        folds_y[variance[i]].append(y[i])
-    return folds_x, folds_y
 
 
 def rmse(y, y_est):
@@ -112,7 +92,7 @@ def exclude_col(X, *args):
 
 def cv(X, y, iterations=1000, log=False):
     err = np.zeros(iterations)
-    X_l, X_t, y_l, y_t = split(X, y, seventy_five=True)
+    X_l, X_t, y_l, y_t = split(X, y, seventy_five=False)
     for i in range(iterations):
         r = Regr()
         r.fit(X_l, y_l)
@@ -120,7 +100,7 @@ def cv(X, y, iterations=1000, log=False):
         err[i] = rmse(y_t, y_est)
     if log:
         print(err)
-    return err.mean()
+    return np.median(err)
 
 
 def get_mean_and_std(x):
@@ -151,70 +131,18 @@ def correlation(a, b):
     return cov / (a.std() * b.std() * n)
 
 
-def max_corr_index(X, y):
-    best = 0
-    second_i = -1
-    third_i = -1
-    i = -1
-    curr = 0
-    for col in X.T:
-        corr = correlation(col, y)
-        if corr > best:
-            third_i = second_i
-            second_i = i
-            best = corr
-            i = curr
-        curr += 1
-    return i, second_i, third_i
-
-
-def exclude_col_except(X, *exc):
-    row, col = X.shape
-    to_delete = set(i for i in range(col)).difference(exc)
-    return exclude_col(X, *to_delete)
-
-
 def add_column(X, col):
     return np.vstack((X.T, col)).T
-
-
-def forward_selection(X, y, fine=0, min_col=1, cv_it=500):
-    best, second, third = max_corr_index(X, y)
-    selected = set()
-    selected.add(best)
-    selected.add(second)
-    selected.add(third)
-    X_to_learn = exclude_col_except(X, best, second, third)
-    err = sys.maxint
-    new_err = cv(X_to_learn, y, iterations=cv_it)
-    while new_err < err or err > 2 and len(selected) < min_col:
-        err = new_err
-        new_err = sys.maxint
-        ind = -1
-        min_ind = -1
-        for col in X.T:
-            ind += 1
-            if ind in selected:
-                continue
-            cur_err = cv(add_column(X_to_learn, col), y, iterations=cv_it, log=False)
-            if cur_err < new_err:
-                new_err = cur_err
-                min_ind = ind
-        if min_ind != -1:
-            selected.add(min_ind)
-            X_to_learn = add_column(X_to_learn, X.T[min_ind])
-    print('Select {0} columns'.format(len(selected)))
-    print(selected)
-    return selected
 
 
 def backward_selection(X, y, min_col=1, cv_it=500):
     to_delete = set()
     _, n = X.shape
-    err = sys.maxint
-    new_err = 0
-    while n - len(to_delete) > min_col and new_err < err:
+    err = float('inf')
+    new_err = err - 1
+    while n - len(to_delete) > min_col:
         err = new_err
+        new_err = float('inf')
         ind = -1
         min_ind = -1
         for col in X.T:
@@ -227,9 +155,10 @@ def backward_selection(X, y, min_col=1, cv_it=500):
                 min_ind = ind
         if min_ind != -1:
             to_delete.add(min_ind)
-    print('Error on new iteration {}'.format(new_err))
+        print('Error on new iteration {}, get rid of {}'.format(new_err, min_ind))
     print(to_delete)
     return to_delete
+
 
 
 
@@ -239,13 +168,13 @@ y = read_y('learn.csv')
 learn_mean, learn_std = get_mean_and_std(X)
 X_learn_scaled = scale(X, learn_mean, learn_std)
 
-keep = forward_selection(X_learn_scaled, y, min_col=150, cv_it=1)
-X_learn_scaled_col = exclude_col_except(X_learn_scaled, *keep)
-X_learn_scaled_col_row, y_row = get_rid_of_outliers(X_learn_scaled_col, y, learn_mean, learn_std, m=20)
+to_delete = backward_selection(X_learn_scaled, y, min_col=100, cv_it=10)
+X_learn_scaled_col = exclude_col(X_learn_scaled, *to_delete)
+X_learn_scaled_col_row, y_row = get_rid_of_outliers(X_learn_scaled_col, y, learn_mean, learn_std, m=25)
 
 X_test = read_x('test.csv', exclude_y=False)
 X_test_scaled = scale(X_test, learn_mean, learn_std)
-X_test_col_scaled = exclude_col_except(X_test_scaled, *keep)
+X_test_col_scaled = exclude_col(X_test_scaled, *to_delete)
 
 r = Regr()
 r.fit(X_learn_scaled_col_row, y_row)
