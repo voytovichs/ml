@@ -3,6 +3,7 @@ from random import shuffle
 
 import numpy as np
 import numpy.linalg as la
+import sys
 
 
 class Regr(object):
@@ -177,18 +178,18 @@ def add_column(X, col):
     return np.vstack((X.T, col)).T
 
 
-def forward_selection(X, y, fine=0, min_col=100, cv_it=500):
+def forward_selection(X, y, fine=0, min_col=1, cv_it=500):
     best, second, third = max_corr_index(X, y)
     selected = set()
     selected.add(best)
     selected.add(second)
     selected.add(third)
     X_to_learn = exclude_col_except(X, best, second, third)
-    err = 100000000000000
+    err = sys.maxint
     new_err = cv(X_to_learn, y, iterations=cv_it)
     while new_err < err or err > 2 and len(selected) < min_col:
         err = new_err
-        new_err = 100000000000000
+        new_err = sys.maxint
         ind = -1
         min_ind = -1
         for col in X.T:
@@ -202,10 +203,34 @@ def forward_selection(X, y, fine=0, min_col=100, cv_it=500):
         if min_ind != -1:
             selected.add(min_ind)
             X_to_learn = add_column(X_to_learn, X.T[min_ind])
-        print('Error on new iteration {}'.format(err))
     print('Select {0} columns'.format(len(selected)))
     print(selected)
     return selected
+
+
+def backward_selection(X, y, min_col=1, cv_it=500):
+    to_delete = set()
+    _, n = X.shape
+    err = sys.maxint
+    new_err = 0
+    while n - len(to_delete) > min_col and new_err < err:
+        err = new_err
+        ind = -1
+        min_ind = -1
+        for col in X.T:
+            ind += 1
+            if ind in to_delete:
+                continue
+            cur_err = cv(exclude_col(X, ind, *to_delete), y, iterations=cv_it)
+            if cur_err < new_err:
+                new_err = cur_err
+                min_ind = ind
+        if min_ind != -1:
+            to_delete.add(min_ind)
+    print('Error on new iteration {}'.format(new_err))
+    print(to_delete)
+    return to_delete
+
 
 
 
@@ -213,17 +238,17 @@ X = read_x('learn.csv')
 y = read_y('learn.csv')
 learn_mean, learn_std = get_mean_and_std(X)
 X_learn_scaled = scale(X, learn_mean, learn_std)
-X_learn_scaled_row, y_row = get_rid_of_outliers(X_learn_scaled, y, learn_mean, learn_std, m=15)
 
-keep = forward_selection(X_learn_scaled_row, y_row, min_col=150, cv_it=12)
-X_learn_scaled_row_col = exclude_col_except(X_learn_scaled_row, *keep)
+keep = forward_selection(X_learn_scaled, y, min_col=150, cv_it=1)
+X_learn_scaled_col = exclude_col_except(X_learn_scaled, *keep)
+X_learn_scaled_col_row, y_row = get_rid_of_outliers(X_learn_scaled_col, y, learn_mean, learn_std, m=20)
 
 X_test = read_x('test.csv', exclude_y=False)
 X_test_scaled = scale(X_test, learn_mean, learn_std)
 X_test_col_scaled = exclude_col_except(X_test_scaled, *keep)
 
 r = Regr()
-r.fit(X_learn_scaled_row_col, y_row)
+r.fit(X_learn_scaled_col_row, y_row)
 y_test = r.predict(X_test_col_scaled)
 write('answer.csv', y_test)
-print(cv(X_learn_scaled_row_col, y_row, iterations=500))
+print(cv(X_learn_scaled_col_row, y_row, iterations=500))
