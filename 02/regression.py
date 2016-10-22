@@ -3,7 +3,8 @@ from random import shuffle
 
 import numpy as np
 import numpy.linalg as la
-from sklearn.preprocessing import MinMaxScaler
+from sklearn.linear_model import LinearRegression
+from sklearn.preprocessing import StandardScaler
 
 
 class Regr(object):
@@ -14,7 +15,7 @@ class Regr(object):
 
     def fit(self, X, y):
         self._fitted = True
-        first = X.dot(X.T)
+        first = X.dot(X.transpose())
         second = la.inv(first)
         third = second.dot(X)
         fourth = (y - y.mean()).reshape(1, -1).dot(third)
@@ -25,7 +26,7 @@ class Regr(object):
     def predict(self, X):
         if not self._fitted:
             raise RuntimeError('Fit regression before predicting')
-        y = self._beta * X.T + self._beta0
+        y = self._beta.dot(X.T) + self._beta0
         arr = [y[0, i] for i in range(y.shape[1])]
         return np.array(arr)
 
@@ -46,7 +47,7 @@ def split(X, y, seventy_five=False):
 
 
 def split_array(X, y):
-    row = len(X)
+    row = X.shape[0]
     for_test = [i % 2 == 0 for i in range(row)]
     shuffle(for_test)
     X_learn, X_test, y_learn, y_test = [], [], [], []
@@ -113,12 +114,11 @@ def cv(X, y, array=False, iterations=1000, log=False):
     err = np.zeros(iterations)
     for i in range(iterations):
         X_l, X_t, y_l, y_t = split(X, y) if not array else split_array(X, y)
-        r = Regr()
+        r = LinearRegression()#Regr()
         if array:
             X_l = X_l.reshape(-1, 1)
             X_t = X_t.reshape(-1, 1)
         r.fit(X_l, y_l)
-
         y_est = r.predict(X_t if not array else np.matrix(X_t))
         err[i] = rmse(y_t, y_est)
     if log:
@@ -205,39 +205,44 @@ def select_one_by_one(X, y, cv_iter, n):
         min_err = float('inf')
         min_ind = -1
         ind = min_ind
+        singular = 0
         for col in learn_set.T:
-            ind += 1
+            ind +=1
             try:
                 cur_err = cv(col, y, array=True, iterations=cv_iter)
                 if cur_err < min_err:
                     min_err = cur_err
                     min_ind = ind
             except:
-                print('Ignore iteration, singular matrix')
+                singular += 1
         learn_set = exclude_col(learn_set, min_ind)
         selected.append(min_ind)
-        print('Current error {}'.format(min_err))
+        print('Current error {0}, singular {1}'.format(min_err, singular))
     return recover_index(selected)
 
 
-X = read_x('learn.csv')
+#X = np.matrix([[1, 2, 3], [4, 5, 6]])  # read_x('learn.csv')#
+X = read_x('learn.csv')#
+#y = np.array([50, 23])  # read_y('learn.csv')
 y = read_y('learn.csv')
-scaler = MinMaxScaler()
-# X, y = get_rid_of_outliers(X, y, learn_mean, learn_std, m=10)
+scaler = StandardScaler()
+learn_mean, learn_std = get_mean_and_std(X)
+X, y = get_rid_of_outliers(X, y, learn_mean, learn_std, m=10)
 scaler.fit(X)
-X = scaler.transform(X)
-# selected = set(select_one_by_one(X, y, cv_iter=50, n=30))
-# X = exclude_col_except(X, *selected)
+# X= scaler.transform(X)
+selected = set(select_one_by_one(X, y, cv_iter=30, n=30))
+print(selected)
+X = exclude_col_except(X, *selected)
 
 test = read_x('test.csv', exclude_y=False)
 test = scaler.transform(test)
-# test = exclude_col_except(test, *selected)
+test = exclude_col_except(test, *selected)
 
 print(cv(X, y, iterations=50))
-# r = Regr()
-# r.fit(X, y)
+r = LinearRegression()  # Regr()
+r.fit(X, y)
 # print(r._beta)
 
-# answer = r.predict(test)
-# print(answer)
-# write('answer.csv', answer)
+answer = r.predict(test)
+print(answer)
+write('answer.csv', answer)
