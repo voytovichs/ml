@@ -3,6 +3,8 @@ from random import shuffle
 
 import numpy as np
 import numpy.linalg as la
+from sklearn.preprocessing import MinMaxScaler
+
 
 class Regr(object):
     def __init__(self):
@@ -12,15 +14,18 @@ class Regr(object):
 
     def fit(self, X, y):
         self._fitted = True
-        ha = X.dot(X.T)
-        #self._beta = (y - y.mean()).dot((la.inv(X.dot(X.T)).dot(X)))
-        self._beta = la.inv(X * X.T)
+        first = X.dot(X.T)
+        second = la.inv(first)
+        third = second.dot(X)
+        fourth = (y - y.mean()).reshape(1, -1).dot(third)
+        fifth = fourth
+        self._beta = fifth
         self._beta0 = y.mean()
 
     def predict(self, X):
         if not self._fitted:
             raise RuntimeError('Fit regression before predicting')
-        y = self._beta.T * X + self._beta0
+        y = self._beta * X.T + self._beta0
         arr = [y[0, i] for i in range(y.shape[1])]
         return np.array(arr)
 
@@ -202,32 +207,37 @@ def select_one_by_one(X, y, cv_iter, n):
         ind = min_ind
         for col in learn_set.T:
             ind += 1
-            cur_err = cv(col, y, array=True, iterations=cv_iter)
-            if cur_err < min_err:
-                min_err = cur_err
-                min_ind = ind
+            try:
+                cur_err = cv(col, y, array=True, iterations=cv_iter)
+                if cur_err < min_err:
+                    min_err = cur_err
+                    min_ind = ind
+            except:
+                print('Ignore iteration, singular matrix')
         learn_set = exclude_col(learn_set, min_ind)
         selected.append(min_ind)
         print('Current error {}'.format(min_err))
     return recover_index(selected)
 
 
-
-
 X = read_x('learn.csv')
 y = read_y('learn.csv')
-learn_mean, learn_std = get_mean_and_std(X)
-X, y = get_rid_of_outliers(X, y, learn_mean, learn_std, m=10)
-selected = set(select_one_by_one(X, y, cv_iter=50, n=30))
-X = exclude_col_except(X, *selected)
+scaler = MinMaxScaler()
+# X, y = get_rid_of_outliers(X, y, learn_mean, learn_std, m=10)
+scaler.fit(X)
+X = scaler.transform(X)
+# selected = set(select_one_by_one(X, y, cv_iter=50, n=30))
+# X = exclude_col_except(X, *selected)
 
 test = read_x('test.csv', exclude_y=False)
-test = exclude_col_except(test, *selected)
+test = scaler.transform(test)
+# test = exclude_col_except(test, *selected)
 
-r = Regr()
-r.fit(X, y)
-#print(r._beta)
+print(cv(X, y, iterations=50))
+# r = Regr()
+# r.fit(X, y)
+# print(r._beta)
 
-answer = r.predict(test)
-print(answer)
-write('answer.csv', answer)
+# answer = r.predict(test)
+# print(answer)
+# write('answer.csv', answer)
