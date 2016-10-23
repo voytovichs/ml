@@ -114,7 +114,7 @@ def cv(X, y, array=False, iterations=1000, log=False):
     err = np.zeros(iterations)
     for i in range(iterations):
         X_l, X_t, y_l, y_t = split(X, y) if not array else split_array(X, y)
-        r = LinearRegression()#Regr()
+        r = LinearRegression()  # Regr()
         if array:
             X_l = X_l.reshape(-1, 1)
             X_t = X_t.reshape(-1, 1)
@@ -192,6 +192,27 @@ def recover_index(a):
     return recovered
 
 
+def correlation(a, b):
+    a_mean = a.mean()
+    b_mean = b.mean()
+    n = len(b)
+    cov = sum([(a[0, i] - a_mean) * (b[i] - b_mean) for i in range(n)])
+    return cov / (a.std() * b.std() * n)
+
+
+def best_correlated(X, y):
+    best = 0
+    i = -1
+    curr = 0
+    for col in X.T:
+        corr = correlation(col, y)
+        if corr > best:
+            best = corr
+            i = curr
+        curr += 1
+    return i
+
+
 def exclude_col_except(X, *exc):
     row, col = X.shape
     to_delete = set(i for i in range(col)).difference(exc)
@@ -207,7 +228,7 @@ def select_one_by_one(X, y, cv_iter, n):
         ind = min_ind
         singular = 0
         for col in learn_set.T:
-            ind +=1
+            ind += 1
             try:
                 cur_err = cv(col, y, array=True, iterations=cv_iter)
                 if cur_err < min_err:
@@ -221,22 +242,31 @@ def select_one_by_one(X, y, cv_iter, n):
     return recover_index(selected)
 
 
-#X = np.matrix([[1, 2, 3], [4, 5, 6]])  # read_x('learn.csv')#
-X = read_x('learn.csv')#
-#y = np.array([50, 23])  # read_y('learn.csv')
+def select_best_correlated(X, y, n=10):
+    bests = []
+    for i in range(n):
+        a = best_correlated(X, y)
+        bests.append(a)
+        X = exclude_col(X, a)
+    return bests
+
+
+# X = np.matrix([[1, 2, 3], [4, 5, 6]])  # read_x('learn.csv')#
+X = read_x('learn.csv')  #
+# y = np.array([50, 23])  # read_y('learn.csv')
 y = read_y('learn.csv')
 scaler = StandardScaler()
 learn_mean, learn_std = get_mean_and_std(X)
-X, y = get_rid_of_outliers(X, y, learn_mean, learn_std, m=10)
+X, y = get_rid_of_outliers(X, y, learn_mean, learn_std, m=7)
 scaler.fit(X)
 # X= scaler.transform(X)
-selected = set(select_one_by_one(X, y, cv_iter=30, n=30))
-print(selected)
-X = exclude_col_except(X, *selected)
+selected = select_one_by_one(X, y, cv_iter=30, n=30)
+best_cor = select_best_correlated(X, y, n=10)
+X = exclude_col_except(X, *selected + best_cor)
 
 test = read_x('test.csv', exclude_y=False)
 test = scaler.transform(test)
-test = exclude_col_except(test, *selected)
+test = exclude_col_except(test, *selected + best_cor)
 
 print(cv(X, y, iterations=50))
 r = LinearRegression()  # Regr()
