@@ -31,7 +31,7 @@ class Regr(object):
         return np.array(arr)
 
 
-def split(X, y, seventy_five=False):
+def split(X, y):
     row, col = X.shape
     for_test = [i % 2 == 0 for i in range(row)]
     shuffle(for_test)
@@ -142,7 +142,7 @@ def get_rid_of_outliers(x, y, mean, std, m=3):
         for r in range(row):
             if abs(x[r, c] - mean[c]) >= m * std[c]:
                 to_delete.add(r)
-    print('{0} rows has outline values'.format(len(to_delete)))
+    print('{0} rows have outline values'.format(len(to_delete)))
     return exclude_row(x, *to_delete), exclude_row(y, *to_delete)
 
 
@@ -156,31 +156,6 @@ def correlation(a, b):
 
 def add_column(X, col):
     return np.vstack((X.T, col)).T
-
-
-def backward_selection(X, y, min_col=1, cv_it=500):
-    to_delete = set()
-    _, n = X.shape
-    err = float('inf')
-    new_err = err - 1
-    while n - len(to_delete) > min_col:
-        err = new_err
-        new_err = float('inf')
-        ind = -1
-        min_ind = -1
-        for col in X.T:
-            ind += 1
-            if ind in to_delete:
-                continue
-            cur_err = cv(exclude_col(X, ind, *to_delete), y, iterations=cv_it)
-            if cur_err < new_err:
-                new_err = cur_err
-                min_ind = ind
-        if min_ind != -1:
-            to_delete.add(min_ind)
-        print('Error on new iteration {}, get rid of {}'.format(new_err, min_ind))
-    print(to_delete)
-    return to_delete
 
 
 def recover_index(a):
@@ -205,7 +180,7 @@ def best_correlated(X, y):
     i = -1
     curr = 0
     for col in X.T:
-        corr = correlation(col, y)
+        corr = correlation(col.reshape(1, -1), y)
         if corr > best:
             best = corr
             i = curr
@@ -221,7 +196,8 @@ def exclude_col_except(X, *exc):
 
 def select_one_by_one(X, y, cv_iter, n):
     selected = []
-    learn_set = exclude_col(X)  # weird kind of copying
+    learn_set = np.matrix.copy(X)
+    last_it_err = float('inf')
     for iter in range(n):
         min_err = float('inf')
         min_ind = -1
@@ -238,7 +214,14 @@ def select_one_by_one(X, y, cv_iter, n):
                 singular += 1
         learn_set = exclude_col(learn_set, min_ind)
         selected.append(min_ind)
-        print('Current error {0}, singular {1}'.format(min_err, singular))
+        # print('Current error {0}, singular {1}'.format(min_err, singular))
+        current_it_err = cv(exclude_col_except(X, *selected), y, iterations=cv_iter)
+        print('Last err {0}, current {1}'.format(last_it_err, current_it_err) +
+              (' continue' if current_it_err < last_it_err else ' anyway'))
+        if current_it_err < last_it_err:
+            last_it_err = current_it_err
+        else:
+            pass  # break
     return recover_index(selected)
 
 
@@ -251,23 +234,47 @@ def select_best_correlated(X, y, n=10):
     return bests
 
 
-# X = np.matrix([[1, 2, 3], [4, 5, 6]])  # read_x('learn.csv')#
-X = read_x('learn.csv')  #
-# y = np.array([50, 23])  # read_y('learn.csv')
+def concatenate_matrices(a, b):
+    return np.vstack((a, b))
+
+def concatenate_matrices_col(a, b):
+    return np.hstack((a, b))
+def split_matrix(a, bound=336):
+    return a[:bound], a[bound:]
+
+
+def multiply_features(X, dim=3):
+    dims = [np.matrix.copy(X.T)]
+    for d in range(1, dim):
+        new_dimension = []
+        n = dims[d - 1].shape[0]
+        for i1 in range(n):
+            for i2 in range(i1, n):
+                a1 = dims[d-1][i1]
+                a2 = dims[d-1][i2]
+                new_dimension.append(np.squeeze(np.asarray(np.multiply(a1, a2))))
+        dims.append(np.matrix(new_dimension))
+    result = dims[0]
+    for i in range(1, len(dims)):
+        result = concatenate_matrices_col(result, dims[i])
+    return result
+
+X = read_x('learn.csv')
 y = read_y('learn.csv')
+test = read_x('test.csv', exclude_y=False)
+
 scaler = StandardScaler()
 learn_mean, learn_std = get_mean_and_std(X)
-X, y = get_rid_of_outliers(X, y, learn_mean, learn_std, m=7)
+# TODO X, y = get_rid_of_outliers(X, y, learn_mean, learn_std, m=7)
 scaler.fit(X)
 # X= scaler.transform(X)
 selected = select_one_by_one(X, y, cv_iter=30, n=30)
 best_cor = select_best_correlated(X, y, n=10)
-X = exclude_col_except(X, *selected + best_cor)
-
-test = read_x('test.csv', exclude_y=False)
-test = scaler.transform(test)
-test = exclude_col_except(test, *selected + best_cor)
-
+new_X = multiply_features(exclude_col_except(concatenate_matrices(X, test), *selected + best_cor))
+X, test = split_matrix(new_X)
+selected = select_one_by_one(X, y, cv_iter=30, n=40)
+X = exclude_col_except(X, *selected)
+test = exclude_col_except(test, *selected)
 print(cv(X, y, iterations=50))
 r = LinearRegression()  # Regr()
 r.fit(X, y)
