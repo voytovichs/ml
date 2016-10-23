@@ -3,6 +3,8 @@ from random import shuffle
 
 import numpy as np
 import numpy.linalg as la
+from sklearn.preprocessing import StandardScaler
+
 
 class Regr(object):
     def __init__(self):
@@ -19,7 +21,7 @@ class Regr(object):
         fourth = (y - y.mean()).reshape(1, -1).dot(third)
         fifth = fourth
         '''
-        coef, _, _, _ = la.lstsq(X, y)
+        coef, _, _, _ = la.lstsq(X, y - y.mean())
         self._beta = coef
         self._beta0 = y.mean()
 
@@ -263,7 +265,6 @@ def multiply_features(X, dim=3):
 X = read_x('learn.csv')
 y = read_y('learn.csv')
 test = read_x('test.csv', exclude_y=False)
-
 learn_mean, learn_std = get_mean_and_std(X)
 # TODO X, y = get_rid_of_outliers(X, y, learn_mean, learn_std, m=7)
 selected = select_one_by_one(X, y, cv_iter=10, n=10)
