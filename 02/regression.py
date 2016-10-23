@@ -3,9 +3,6 @@ from random import shuffle
 
 import numpy as np
 import numpy.linalg as la
-from sklearn.linear_model import LinearRegression
-from sklearn.preprocessing import StandardScaler
-
 
 class Regr(object):
     def __init__(self):
@@ -15,12 +12,15 @@ class Regr(object):
 
     def fit(self, X, y):
         self._fitted = True
+        '''
         first = X.dot(X.transpose())
         second = la.inv(first)
         third = second.dot(X)
         fourth = (y - y.mean()).reshape(1, -1).dot(third)
         fifth = fourth
-        self._beta = fifth
+        '''
+        coef, _, _, _ = la.lstsq(X, y)
+        self._beta = coef
         self._beta0 = y.mean()
 
     def predict(self, X):
@@ -114,7 +114,7 @@ def cv(X, y, array=False, iterations=1000, log=False):
     err = np.zeros(iterations)
     for i in range(iterations):
         X_l, X_t, y_l, y_t = split(X, y) if not array else split_array(X, y)
-        r = LinearRegression()  # Regr()
+        r = Regr()
         if array:
             X_l = X_l.reshape(-1, 1)
             X_t = X_t.reshape(-1, 1)
@@ -264,22 +264,18 @@ X = read_x('learn.csv')
 y = read_y('learn.csv')
 test = read_x('test.csv', exclude_y=False)
 
-scaler = StandardScaler()
 learn_mean, learn_std = get_mean_and_std(X)
 # TODO X, y = get_rid_of_outliers(X, y, learn_mean, learn_std, m=7)
-scaler.fit(X)
-# X= scaler.transform(X)
-selected = select_one_by_one(X, y, cv_iter=10, n=15)
+selected = select_one_by_one(X, y, cv_iter=10, n=10)
 best_cor = select_best_correlated(X, y, n=10)
 new_X = multiply_features(exclude_col_except(concatenate_matrices(X, test), *selected + best_cor))
 X, test = split_matrix(new_X)
-selected = select_one_by_one(X, y, cv_iter=30, n=40)
+selected = select_one_by_one(X, y, cv_iter=5, n=20)
 X = exclude_col_except(X, *selected)
 test = exclude_col_except(test, *selected)
 print(cv(X, y, iterations=50))
-r = LinearRegression()  # Regr()
+r = Regr()
 r.fit(X, y)
-# print(r._beta)
 
 answer = r.predict(test)
 print(answer)
