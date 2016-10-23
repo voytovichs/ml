@@ -206,7 +206,7 @@ def select_one_by_one(X, y, cv_iter, n):
         for col in learn_set.T:
             ind += 1
             try:
-                cur_err = cv(col, y, array=True, iterations=cv_iter)
+                cur_err = cv(col.reshape(-1, 1), y, array=False, iterations=cv_iter)
                 if cur_err < min_err:
                     min_err = cur_err
                     min_ind = ind
@@ -214,14 +214,14 @@ def select_one_by_one(X, y, cv_iter, n):
                 singular += 1
         learn_set = exclude_col(learn_set, min_ind)
         selected.append(min_ind)
-        # print('Current error {0}, singular {1}'.format(min_err, singular))
+        print('Current error {0}, singular {1}'.format(min_err, singular))
         current_it_err = cv(exclude_col_except(X, *selected), y, iterations=cv_iter)
         print('Last err {0}, current {1}'.format(last_it_err, current_it_err) +
               (' continue' if current_it_err < last_it_err else ' anyway'))
-        if current_it_err < last_it_err:
-            last_it_err = current_it_err
-        else:
+        last_it_err = current_it_err
+        if current_it_err > last_it_err:
             pass  # break
+
     return recover_index(selected)
 
 
@@ -239,6 +239,7 @@ def concatenate_matrices(a, b):
 
 def concatenate_matrices_col(a, b):
     return np.hstack((a, b))
+
 def split_matrix(a, bound=336):
     return a[:bound], a[bound:]
 
@@ -254,9 +255,9 @@ def multiply_features(X, dim=3):
                 a2 = dims[d-1][i2]
                 new_dimension.append(np.squeeze(np.asarray(np.multiply(a1, a2))))
         dims.append(np.matrix(new_dimension))
-    result = dims[0]
+    result = dims[0].T
     for i in range(1, len(dims)):
-        result = concatenate_matrices_col(result, dims[i])
+        result = concatenate_matrices_col(result, dims[i].T)
     return result
 
 X = read_x('learn.csv')
@@ -268,7 +269,7 @@ learn_mean, learn_std = get_mean_and_std(X)
 # TODO X, y = get_rid_of_outliers(X, y, learn_mean, learn_std, m=7)
 scaler.fit(X)
 # X= scaler.transform(X)
-selected = select_one_by_one(X, y, cv_iter=30, n=30)
+selected = select_one_by_one(X, y, cv_iter=10, n=15)
 best_cor = select_best_correlated(X, y, n=10)
 new_X = multiply_features(exclude_col_except(concatenate_matrices(X, test), *selected + best_cor))
 X, test = split_matrix(new_X)
