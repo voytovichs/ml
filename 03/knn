@@ -1,19 +1,58 @@
 import os
+from collections import OrderedDict
 from random import shuffle
 
 import numpy as np
-from sklearn.neighbors import KNeighborsClassifier
 
+
+# http://www.machinelearning.ru/wiki/index.php?title=KNN
 
 class KNN:
     def __init__(self):
         self.fitted = False
 
-    def fit(self, X, y):
-        raise Exception('Not implemented!')
+    def _euclid_distance(self, a, b):
+        return np.sqrt(np.sum((a - b) ** 2))
 
-    def predict(self, X):
-        raise Exception('Not implemented!')
+    def _distance(self, x, y):
+        return self._euclid_distance(x, y)
+
+    def fit(self, X, y):
+        self._X = X.A
+        self._y = y
+        self._n = len(y)
+
+    # may not work because of self argument
+    def _compare_pair(self, a, b):
+        if a[0] < b[0]:
+            return - 1
+        elif a[0] > b[0]:
+            return 1
+        else:
+            return 0
+
+    def _make_decision(self, neighbours):
+        dict = OrderedDict()
+        for a in neighbours:
+            if a[1] in dict:
+                dict[a[1]] += 1
+            else:
+                dict[a[1]] = 1
+        s = sorted(dict, key=lambda _p: _p[1], reverse=True)
+        return s[0][0]
+
+
+    def predict(self, X, k=3):
+        labels = []
+        for a in X.A:
+            neighbours = []
+            for i in range(self._n):
+                # format is (distance, label)
+                neighbours.append((self._distance(a, self._X[i]), self._y[i]))
+            s = sorted(neighbours, key=lambda _p: _p[0])
+            label = self._make_decision(s[:k])
+            labels.append(label)
+        return np.array(labels)
 
 
 def read_x(path, exclude_y=True):
@@ -68,6 +107,9 @@ def split(X, y):
     return np.matrix(X_learn), np.matrix(X_test), np.array(y_learn), np.array(y_test)
 
 
+# TODO: implement leave-one-out
+# split on three parts: learn, test_k, test
+
 def cv(X, y, iterations=10, log=False):
     acc = np.zeros(iterations)
     for i in range(iterations):
@@ -79,7 +121,6 @@ def cv(X, y, iterations=10, log=False):
     if log:
         print(acc)
     return np.median(acc)
-
 
 X, y = read_x('learn.csv'), read_y('learn.csv')
 print(cv(X, y, 10))
