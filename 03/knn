@@ -1,0 +1,70 @@
+from sklearn.neighbors import KNeighborsClassifier
+from random import shuffle
+import numpy as np
+import os
+
+
+def read_x(path, exclude_y=True):
+    data = np.genfromtxt(path, delimiter=',', skip_header=True)
+    _row, col = data.shape
+    sub = 1 if exclude_y else 0
+    return exclude_col(data, 0, col - sub)  # get rid of id's and y
+
+
+def read_y(path):
+    data = np.genfromtxt(path, delimiter=',', skip_header=True)
+    row, col = data.shape
+    return np.array([data[i, col - 1] for i in range(row)])
+
+
+def exclude_col(X, *args):
+    return np.delete(X, args, axis=1)
+
+def write(path, data):
+    tmp = 'haha.csv'
+    ids = [i + 336 for i in range(len(data))]
+    np.savetxt(tmp, data, fmt='%d', header='id,label', delimiter=',', comments='')
+    lines = []
+    with open(tmp, 'r') as file:
+        lines = file.readlines()
+    os.remove(tmp)
+    for i in range(1, len(lines)):
+        lines[i] = '{0},{1}'.format(ids[i - 1], lines[i])
+    with open(path, 'w') as file:
+        file.writelines(lines)
+
+
+def accuracy(y, y_real):
+    n = len(y)
+    cnt = [1 if y[i] == y_real[i] else 0 for i in range(n)]
+    return sum(cnt) / n
+
+def split(X, y):
+    row, col = X.shape
+    for_test = [i % 2 == 0 for i in range(row)]
+    shuffle(for_test)
+    X_learn, X_test, y_learn, y_test = [], [], [], []
+    for i in range(row):
+        if for_test[i]:
+            X_test.append([X[i, k] for k in range(col)])
+            y_test.append(y[i])
+        else:
+            X_learn.append([X[i, k] for k in range(col)])
+            y_learn.append(y[i])
+    return np.matrix(X_learn), np.matrix(X_test), np.array(y_learn), np.array(y_test)
+
+def cv(X, y, iterations=10, log=False):
+    acc = np.zeros(iterations)
+    for i in range(iterations):
+        X_l, X_t, y_l, y_t = split(X, y)
+        r = KNeighborsClassifier()
+        r.fit(X_l, y_l)
+        y_est = r.predict(X_t)
+        acc[i] = accuracy(y_est, y_t)
+    if log:
+        print(acc)
+    return np.median(acc)
+
+X, y = read_x('learn.csv'), read_y('learn.csv')
+print(cv(X, y, 10))
+
