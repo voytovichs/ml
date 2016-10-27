@@ -42,15 +42,24 @@ class KNN:
         return s[0][0]
 
 
-    def predict(self, X, k=3):
-        labels = []
+    def prepare_to_predict(self, X):
+        self._neigh = []
         for a in X.A:
             neighbours = []
             for i in range(self._n):
                 # format is (distance, label)
                 neighbours.append((self._distance(a, self._X[i]), self._y[i]))
             s = sorted(neighbours, key=lambda _p: _p[0])
-            label = self._make_decision(s[:k])
+            self._neigh.append(s)
+
+
+    def predict(self, X, k):
+        if self._neigh is None:
+            raise Exception('Call prepare_to_predict first')
+        labels = []
+        for i in range(len(X.A)):
+            i += 1
+            label = self._make_decision(self._neigh[i][:k])
             labels.append(label)
         return np.array(labels)
 
@@ -71,7 +80,7 @@ def read_y(path):
 def exclude_col(X, *args):
     return np.delete(X, args, axis=1)
 
-
+# TODO: this doesn't work, id's aren't there
 def write(path, data):
     tmp = 'haha.csv'
     ids = [i + 336 for i in range(len(data))]
@@ -115,9 +124,13 @@ def cv(X, y, iterations=10, log=False):
     for i in range(iterations):
         X_l, X_t, y_l, y_t = split(X, y)
         knn = KNN()
+        print('Call fit')
         knn.fit(X_l, y_l)
-        y_est = knn.predict(X_t)
+        print('Call predict')
+        knn.prepare_to_predict(X_t)
+        y_est = knn.predict(X_t, 10)
         acc[i] = accuracy(y_est, y_t)
+        print('Accurancy: {}'.format(acc[i]))
     if log:
         print(acc)
     return np.median(acc)
