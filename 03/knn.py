@@ -38,7 +38,7 @@ class KNN:
                 dict[a[1]] += 1
             else:
                 dict[a[1]] = 1
-        s = sorted(dict, key=lambda _p: _p[1], reverse=True)
+        s = sorted(dict.iteritems(), key=lambda _p: _p[1], reverse=True)
         return s[0][0]
 
 
