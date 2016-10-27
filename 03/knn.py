@@ -5,7 +5,7 @@ from random import shuffle
 import numpy as np
 
 
-# http://www.machinelearning.ru/wiki/index.php?title=KNN
+#TODO: read http://www.machinelearning.ru/wiki/index.php?title=KNN
 
 class KNN:
     def __init__(self):
@@ -68,7 +68,7 @@ def read_x(path, exclude_y=True):
     data = np.genfromtxt(path, delimiter=',', skip_header=True)
     _row, col = data.shape
     sub = 1 if exclude_y else 0
-    return exclude_col(data, 0, col - sub)  # get rid of id's and y
+    return np.matrix(exclude_col(data, 0, col - sub))  # get rid of id's and y
 
 
 def read_y(path):
@@ -116,8 +116,50 @@ def split(X, y):
     return np.matrix(X_learn), np.matrix(X_test), np.array(y_learn), np.array(y_test)
 
 
+def exclude_col(X, *args):
+    return np.delete(X, args, axis=1)
+
+def find_zero_columns(X):
+    zeros = []
+    i = -1
+    for col in X.T.A:
+        i+=1
+        if np.all(col==0):
+            zeros.append(i)
+    return zeros
+
+def delete_zero_columns(X, X_test=None):
+    zeros = find_zero_columns(X)
+    if X_test != None:
+        return exclude_col(X, *zeros), exclude_col(X_test, *zeros)
+    return exclude_col(X, *zeros)
+
+def get_mean_and_std(x):
+    mean = []
+    std = []
+    for row in x.T.A:
+        mean.append(row.mean())
+        std.append(row.std())
+    return mean, std
+
+def normalize(X, mean, std):
+    new_x = []
+    for col, m, s in zip(X.T.A, mean, std):
+        new_x.append((col - m) / s)
+    return np.matrix(new_x).T
+
+def preprocess(X, X_test=None):
+    if X_test != None:
+        nx, nx_test = delete_zero_columns(X, X_test)
+        mean, std = get_mean_and_std(nx)
+        return normalize(nx, mean, std), normalize(nx_test, mean, std)
+    else:
+        nx = delete_zero_columns(X)
+        mean, std = get_mean_and_std(nx)
+        return normalize(nx, mean, std)
+
 # TODO: implement leave-one-out
-# split on three parts: learn, test_k, test
+# TODO: split on three parts: learn, test_k, test
 
 def cv(X, y, iterations=10, log=False):
     acc = np.zeros(iterations)
@@ -128,12 +170,13 @@ def cv(X, y, iterations=10, log=False):
         knn.fit(X_l, y_l)
         print('Call predict')
         knn.prepare_to_predict(X_t)
-        y_est = knn.predict(X_t, 10)
+        y_est = knn.predict(X_t, 5)
         acc[i] = accuracy(y_est, y_t)
         print('Accurancy: {}'.format(acc[i]))
     if log:
         print(acc)
     return np.median(acc)
 
-X, y = read_x('learn.csv'), read_y('learn.csv')
+X, y = preprocess(read_x('fake_learn.fake')), read_y('fake_learn.fake')
+
 print(cv(X, y, 10))
