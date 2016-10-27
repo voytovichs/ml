@@ -38,7 +38,7 @@ class KNN:
                 dict[a[1]] += 1
             else:
                 dict[a[1]] = 1
-        s = sorted(dict.iteritems(), key=lambda _p: _p[1], reverse=True)
+        s = sorted(dict.items(), key=lambda _p: _p[1], reverse=True)
         return s[0][0]
 
 
@@ -58,7 +58,6 @@ class KNN:
             raise Exception('Call prepare_to_predict first')
         labels = []
         for i in range(len(X.A)):
-            i += 1
             label = self._make_decision(self._neigh[i][:k])
             labels.append(label)
         return np.array(labels)
@@ -161,22 +160,17 @@ def preprocess(X, X_test=None):
 # TODO: implement leave-one-out
 # TODO: split on three parts: learn, test_k, test
 
-def cv(X, y, iterations=10, log=False):
+def cv(X, y, iterations=10):
     acc = np.zeros(iterations)
     for i in range(iterations):
         X_l, X_t, y_l, y_t = split(X, y)
         knn = KNN()
-        print('Call fit')
         knn.fit(X_l, y_l)
-        print('Call predict')
         knn.prepare_to_predict(X_t)
         y_est = knn.predict(X_t, 5)
         acc[i] = accuracy(y_est, y_t)
-        print('Accurancy: {}'.format(acc[i]))
-    if log:
-        print(acc)
     return np.median(acc)
 
 X, y = preprocess(read_x('fake_learn.fake')), read_y('fake_learn.fake')
 
-print(cv(X, y, 10))
+print(cv(X, y, 150))
