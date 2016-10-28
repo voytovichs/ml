@@ -5,7 +5,7 @@ from random import shuffle
 import numpy as np
 
 
-#TODO: read http://www.machinelearning.ru/wiki/index.php?title=KNN
+# TODO: read http://www.machinelearning.ru/wiki/index.php?title=KNN
 
 class KNN:
     def __init__(self):
@@ -22,7 +22,6 @@ class KNN:
         self._y = y
         self._n = len(y)
 
-    # may not work because of self argument
     def _compare_pair(self, a, b):
         if a[0] < b[0]:
             return - 1
@@ -41,8 +40,7 @@ class KNN:
         s = sorted(dict.items(), key=lambda _p: _p[1], reverse=True)
         return s[0][0]
 
-
-    def prepare_to_predict(self, X):
+    def sort_neighbours_for(self, X):
         self._neigh = []
         for a in X.A:
             neighbours = []
@@ -51,7 +49,6 @@ class KNN:
                 neighbours.append((self._distance(a, self._X[i]), self._y[i]))
             s = sorted(neighbours, key=lambda _p: _p[0])
             self._neigh.append(s)
-
 
     def predict(self, X, k):
         if self._neigh is None:
@@ -67,31 +64,17 @@ def read_x(path, exclude_y=True):
     data = np.genfromtxt(path, delimiter=',', skip_header=True)
     _row, col = data.shape
     sub = 1 if exclude_y else 0
-    return np.matrix(exclude_col(data, 0, col - sub))  # get rid of id's and y
+    return np.matrix(exclude_col(data, 0, col - sub)), np.array(data.T[0])  # data, id's
 
 
 def read_y(path):
     data = np.genfromtxt(path, delimiter=',', skip_header=True)
     row, col = data.shape
-    return np.array([data[i, col - 1] for i in range(row)])
+    return np.array([data[i, col - 1] for i in range(row)]), np.array(data.T[0])
 
 
 def exclude_col(X, *args):
     return np.delete(X, args, axis=1)
-
-# TODO: this doesn't work, id's aren't there
-def write(path, data):
-    tmp = 'haha.csv'
-    ids = [i + 336 for i in range(len(data))]
-    np.savetxt(tmp, data, fmt='%d', header='id,label', delimiter=',', comments='')
-    lines = []
-    with open(tmp, 'r') as file:
-        lines = file.readlines()
-    os.remove(tmp)
-    for i in range(1, len(lines)):
-        lines[i] = '{0},{1}'.format(ids[i - 1], lines[i])
-    with open(path, 'w') as file:
-        file.writelines(lines)
 
 
 def accuracy(y, y_real):
@@ -118,20 +101,23 @@ def split(X, y):
 def exclude_col(X, *args):
     return np.delete(X, args, axis=1)
 
+
 def find_zero_columns(X):
     zeros = []
     i = -1
     for col in X.T.A:
-        i+=1
-        if np.all(col==0):
+        i += 1
+        if np.all(col == 0):
             zeros.append(i)
     return zeros
+
 
 def delete_zero_columns(X, X_test=None):
     zeros = find_zero_columns(X)
     if X_test != None:
         return exclude_col(X, *zeros), exclude_col(X_test, *zeros)
     return exclude_col(X, *zeros)
+
 
 def get_mean_and_std(x):
     mean = []
@@ -141,11 +127,13 @@ def get_mean_and_std(x):
         std.append(row.std())
     return mean, std
 
+
 def normalize(X, mean, std):
     new_x = []
     for col, m, s in zip(X.T.A, mean, std):
         new_x.append((col - m) / s)
     return np.matrix(new_x).T
+
 
 def preprocess(X, X_test=None):
     if X_test != None:
@@ -157,20 +145,41 @@ def preprocess(X, X_test=None):
         mean, std = get_mean_and_std(nx)
         return normalize(nx, mean, std)
 
+
 # TODO: implement leave-one-out
 # TODO: split on three parts: learn, test_k, test
-
 def cv(X, y, iterations=10):
     acc = np.zeros(iterations)
     for i in range(iterations):
         X_l, X_t, y_l, y_t = split(X, y)
         knn = KNN()
         knn.fit(X_l, y_l)
-        knn.prepare_to_predict(X_t)
+        knn.sort_neighbours_for(X_t)
         y_est = knn.predict(X_t, 5)
         acc[i] = accuracy(y_est, y_t)
     return np.median(acc)
 
-X, y = preprocess(read_x('fake_learn.fake')), read_y('fake_learn.fake')
+
+def write(path, data, ids):
+    tmp = 'haha.csv'
+    np.savetxt(tmp, data, fmt='%d', header='id,label', delimiter=',', comments='')
+    lines = []
+    with open(tmp, 'r') as file:
+        lines = file.readlines()
+    os.remove(tmp)
+    for i in range(1, len(lines)):
+        lines[i] = '{0:g},{1}'.format(ids[i - 1], lines[i])
+    with open(path, 'w') as file:
+        file.writelines(lines)
+
+
+X, x_id = read_x('fake_learn.fake')
+y, y_id = read_y('fake_learn.fake')
+X = preprocess(X)
 
 print(cv(X, y, 150))
+knn = KNN()
+knn.fit(X, y)
+knn.sort_neighbours_for(X)
+ha = knn.predict(X, 1)
+write('answer.csv', ha, x_id)
