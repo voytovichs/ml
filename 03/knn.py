@@ -2,6 +2,8 @@ import os
 from collections import OrderedDict
 import sys
 import subprocess
+
+import itertools
 import numpy as np
 
 
@@ -49,25 +51,29 @@ class KNN:
         s = sorted(dict.items(), key=lambda _p: _p[1], reverse=True)
         return s[0][0]
 
-    def predict(self, X, k):
+    def predict(self, X, k, log=False):
         if self._neigh is None:
             raise Exception('Call fit first')
         labels = []
         for i in range(len(X)):
+            if log:
+                print('{} classified'.format(i))
             label = self._make_decision(self._neigh[i][:k])
             labels.append(label)
         return np.array(labels)
 
 
 def read_x(path, exclude_y=True, n=None):
-    data = np.genfromtxt(path, delimiter=',', skip_header=True, max_rows=n)
+    with open(path, 'r') as f:
+        data = np.genfromtxt(itertools.islice(f, 0, n), delimiter=',', skip_header=True)
     _row, col = data.shape
     sub = 1 if exclude_y else 0
     return np.matrix(exclude_col(data, 0, col - sub)), np.array(data.T[0])  # data, id's
 
 
 def read_y(path, n=None):
-    data = np.genfromtxt(path, delimiter=',', skip_header=True, max_rows=n)
+    with open(path, 'r') as f:
+        data = np.genfromtxt(itertools.islice(f, 0, n), delimiter=',', skip_header=True)
     row, col = data.shape
     return np.array([data[i, col - 1] for i in range(row)]), np.array(data.T[0])
 
@@ -163,9 +169,9 @@ def write(path, data, ids):
 if 'darwin' in sys.platform:
     print('Running \'caffeinate\' on MacOSX to prevent the system from sleeping')
     subprocess.Popen('caffeinate')
-
-X, x_id = read_x('learn.csv', n=1000)
-y, y_id = read_y('learn.csv', n=1000)
+'''
+X, x_id = read_x('learn.csv', n=30)
+y, y_id = read_y('learn.csv', n=30)
 X = preprocess(X)
 
 print(cv(X, y))
@@ -178,4 +184,3 @@ if __name__ == '__main__':
     knn.fit(test)
     labels = knn.predict(X, 20)  # TODO: fix me!
     write('answer.csv', labels, test_id)
-'''
