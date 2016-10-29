@@ -1,6 +1,6 @@
 import os
 from collections import OrderedDict
-from random import shuffle
+import datetime
 
 import numpy as np
 
@@ -8,8 +8,10 @@ import numpy as np
 # TODO: read http://www.machinelearning.ru/wiki/index.php?title=KNN
 
 class KNN:
-    def __init__(self):
-        self.fitted = False
+    def __init__(self, X, y):
+        self._X = X.A
+        self._y = y
+        self._n = len(y)
 
     def _euclid_distance(self, a, b):
         return np.sqrt(np.sum((a - b) ** 2))
@@ -17,10 +19,17 @@ class KNN:
     def _distance(self, x, y):
         return self._euclid_distance(x, y)
 
-    def fit(self, X, y):
-        self._X = X.A
-        self._y = y
-        self._n = len(y)
+    def fit(self, X, one_left_out=None):
+        self._neigh = []
+        for a in X.A:
+            neighbours = []
+            for i in range(self._n):
+                # format is (distance, label)
+                if one_left_out == i:
+                    continue
+                neighbours.append((self._distance(a, self._X[i]), self._y[i]))
+            s = sorted(neighbours, key=lambda _p: _p[0])
+            self._neigh.append(s)
 
     def _compare_pair(self, a, b):
         if a[0] < b[0]:
@@ -40,21 +49,11 @@ class KNN:
         s = sorted(dict.items(), key=lambda _p: _p[1], reverse=True)
         return s[0][0]
 
-    def sort_neighbours_for(self, X):
-        self._neigh = []
-        for a in X.A:
-            neighbours = []
-            for i in range(self._n):
-                # format is (distance, label)
-                neighbours.append((self._distance(a, self._X[i]), self._y[i]))
-            s = sorted(neighbours, key=lambda _p: _p[0])
-            self._neigh.append(s)
-
     def predict(self, X, k):
         if self._neigh is None:
-            raise Exception('Call prepare_to_predict first')
+            raise Exception('Call fit first')
         labels = []
-        for i in range(len(X.A)):
+        for i in range(len(X)):
             label = self._make_decision(self._neigh[i][:k])
             labels.append(label)
         return np.array(labels)
@@ -81,21 +80,6 @@ def accuracy(y, y_real):
     n = len(y)
     cnt = [1 if y[i] == y_real[i] else 0 for i in range(n)]
     return sum(cnt) / n
-
-
-def split(X, y):
-    row, col = X.shape
-    for_test = [i % 2 == 0 for i in range(row)]
-    shuffle(for_test)
-    X_learn, X_test, y_learn, y_test = [], [], [], []
-    for i in range(row):
-        if for_test[i]:
-            X_test.append([X[i, k] for k in range(col)])
-            y_test.append(y[i])
-        else:
-            X_learn.append([X[i, k] for k in range(col)])
-            y_learn.append(y[i])
-    return np.matrix(X_learn), np.matrix(X_test), np.array(y_learn), np.array(y_test)
 
 
 def exclude_col(X, *args):
@@ -146,40 +130,48 @@ def preprocess(X, X_test=None):
         return normalize(nx, mean, std)
 
 
-# TODO: implement leave-one-out
 # TODO: split on three parts: learn, test_k, test
-def cv(X, y, iterations=10):
-    acc = np.zeros(iterations)
-    for i in range(iterations):
-        X_l, X_t, y_l, y_t = split(X, y)
-        knn = KNN()
-        knn.fit(X_l, y_l)
-        knn.sort_neighbours_for(X_t)
-        y_est = knn.predict(X_t, 5)
-        acc[i] = accuracy(y_est, y_t)
-    return np.median(acc)
+def cv(X, y, k=(3, 10, 20, 40), log=True):
+    n = len(y)
+    labels = list(map(lambda a: [], [None] * len(k)))
+    for i in range(n):
+        for k_ind in range(len(k)):
+            knn = KNN(X, y)
+            knn.fit(X[i], one_left_out=i)
+            label = knn.predict(X[i], k[k_ind])
+            labels[k_ind].append(label[0])
+        if log:
+            print('Object {} classified'.format(i))
+
+    acc = [accuracy(labels[i], y) for i in range(len(labels))]
+    return acc
 
 
 def write(path, data, ids):
     tmp = 'haha.csv'
     np.savetxt(tmp, data, fmt='%d', header='id,label', delimiter=',', comments='')
     lines = []
-    with open(tmp, 'r') as file:
-        lines = file.readlines()
+    with open(tmp, 'r') as f:
+        lines = f.readlines()
     os.remove(tmp)
     for i in range(1, len(lines)):
         lines[i] = '{0:g},{1}'.format(ids[i - 1], lines[i])
-    with open(path, 'w') as file:
-        file.writelines(lines)
+    with open(path, 'w') as f:
+        f.writelines(lines)
 
 
-X, x_id = read_x('fake_learn.fake')
-y, y_id = read_y('fake_learn.fake')
+X, x_id = read_x('learn.csv')
+y, y_id = read_y('learn.csv')
 X = preprocess(X)
 
-print(cv(X, y, 150))
-knn = KNN()
-knn.fit(X, y)
-knn.sort_neighbours_for(X)
-ha = knn.predict(X, 1)
-write('answer.csv', ha, x_id)
+print(cv(X, y))
+'''
+if __name__ == '__main__':
+    X, x_id = read_x('learn.csv')
+    y, y_id = read_y('learn.csv')
+    test, test_id = read_x('learn.csv')
+    knn = KNN(X, y)
+    knn.fit(test)
+    labels = knn.predict(X, 20)  # TODO: fix me!
+    write('answer.csv', labels, test_id)
+'''
