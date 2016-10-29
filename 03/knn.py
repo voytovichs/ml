@@ -66,8 +66,8 @@ def read_x(path, exclude_y=True, n=None):
     return np.matrix(exclude_col(data, 0, col - sub)), np.array(data.T[0])  # data, id's
 
 
-def read_y(path):
-    data = np.genfromtxt(path, delimiter=',', skip_header=True)
+def read_y(path, n=None):
+    data = np.genfromtxt(path, delimiter=',', skip_header=True, max_rows=n)
     row, col = data.shape
     return np.array([data[i, col - 1] for i in range(row)]), np.array(data.T[0])
 
