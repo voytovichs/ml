@@ -59,8 +59,8 @@ class KNN:
         return np.array(labels)
 
 
-def read_x(path, exclude_y=True):
-    data = np.genfromtxt(path, delimiter=',', skip_header=True)
+def read_x(path, exclude_y=True, n=None):
+    data = np.genfromtxt(path, delimiter=',', skip_header=True, max_rows=n)
     _row, col = data.shape
     sub = 1 if exclude_y else 0
     return np.matrix(exclude_col(data, 0, col - sub)), np.array(data.T[0])  # data, id's
@@ -164,8 +164,8 @@ if 'darwin' in sys.platform:
     print('Running \'caffeinate\' on MacOSX to prevent the system from sleeping')
     subprocess.Popen('caffeinate')
 
-X, x_id = read_x('learn.csv')
-y, y_id = read_y('learn.csv')
+X, x_id = read_x('learn.csv', n=1000)
+y, y_id = read_y('learn.csv', n=1000)
 X = preprocess(X)
 
 print(cv(X, y))
