@@ -1,7 +1,7 @@
 import os
 from collections import OrderedDict
-import datetime
-
+import sys
+import subprocess
 import numpy as np
 
 
@@ -159,6 +159,10 @@ def write(path, data, ids):
     with open(path, 'w') as f:
         f.writelines(lines)
 
+
+if 'darwin' in sys.platform:
+    print('Running \'caffeinate\' on MacOSX to prevent the system from sleeping')
+    subprocess.Popen('caffeinate')
 
 X, x_id = read_x('learn.csv')
 y, y_id = read_y('learn.csv')
