@@ -70,7 +70,7 @@ class KNN:
             raise Exception('Call fit first')
         labels = []
         for i in range(len(X)):
-            if log:
+            if log and i + 1 % 100 == 0:
                 print('{} classified'.format(i))
             label = self._make_decision_weighted(self._neighbours[i][:k])
             labels.append(label)
