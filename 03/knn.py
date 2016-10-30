@@ -63,17 +63,20 @@ class KNN:
         return np.array(labels)
 
 
-def read_x(path, exclude_y=True, n=None):
+def read_x(path, exclude_y=True, n=None, test=False):
     with open(path, 'r') as f:
-        data = np.genfromtxt(itertools.islice(f, 0, n), delimiter=',', skip_header=True)
+        '''itertools.islice(f, 0, n)'''
+        data = np.genfromtxt(f, delimiter=',', skip_header=not test)
     _row, col = data.shape
+    print('shape {} {}'.format(_row, col))
     sub = 1 if exclude_y else 0
     return np.matrix(exclude_col(data, 0, col - sub)), np.array(data.T[0])  # data, id's
 
 
 def read_y(path, n=None):
     with open(path, 'r') as f:
-        data = np.genfromtxt(itertools.islice(f, 0, n), delimiter=',', skip_header=True)
+        '''itertools.islice(f, 0, n)'''
+        data = np.genfromtxt(f, delimiter=',', skip_header=True)
     row, col = data.shape
     return np.array([data[i, col - 1] for i in range(row)]), np.array(data.T[0])
 
@@ -179,8 +182,9 @@ print(cv(X, y))
 if __name__ == '__main__':
     X, x_id = read_x('learn.csv')
     y, y_id = read_y('learn.csv')
-    test, test_id = read_x('learn.csv')
+    test, test_id = read_x('test.csv', exclude_y=False, test=True)
+    X, test = preprocess(X, test)
     knn = KNN(X, y)
     knn.fit(test)
-    labels = knn.predict(X, 20)  # TODO: fix me!
+    labels = knn.predict(X, 20, True)  # TODO: fix me!
     write('answer.csv', labels, test_id)
