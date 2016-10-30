@@ -21,7 +21,7 @@ class KNN:
     def _distance(self, x, y):
         return self._euclid_distance(x, y)
 
-    def fit(self, X, one_left_out=None, log=True):
+    def fit(self, X, log=False):
         self._neigh = []
         for a in X.A:
             neighbours = []
@@ -29,8 +29,6 @@ class KNN:
                 if log:
                     print('Dealing with {}'.format(i + 1))
                 # format is (distance, label)
-                if one_left_out == i:
-                    continue
                 neighbours.append((self._distance(a, self._X[i]), self._y[i]))
             s = sorted(neighbours, key=lambda _p: _p[0])
             self._neigh.append(s)
@@ -53,6 +51,12 @@ class KNN:
         s = sorted(dict.items(), key=lambda _p: _p[1], reverse=True)
         return s[0][0]
 
+    def predict_loo(self, k):
+        if self._neigh is None:
+            raise Exception('Call fit first')
+        label = self._make_decision(self._neigh[0][:k])
+        return np.array([label])
+
     def predict(self, X, k, log=False):
         if self._neigh is None:
             raise Exception('Call fit first')
@@ -67,8 +71,10 @@ class KNN:
 
 def read_x(path, exclude_y=True, n=None):
     with open(path, 'r') as f:
-        '''itertools.islice(f, 0, n)'''
-        data = np.genfromtxt(f, delimiter=',', skip_header=True)
+        if n is None:
+            data = np.genfromtxt(f, delimiter=',', skip_header=True)
+        else:
+            data = np.genfromtxt(itertools.islice(f, 0, n), delimiter=',', skip_header=True)
     _row, col = data.shape
     print('shape {} {}'.format(_row, col))
     sub = 1 if exclude_y else 0
@@ -77,8 +83,10 @@ def read_x(path, exclude_y=True, n=None):
 
 def read_y(path, n=None):
     with open(path, 'r') as f:
-        '''itertools.islice(f, 0, n)'''
-        data = np.genfromtxt(f, delimiter=',', skip_header=True)
+        if n is None:
+            data = np.genfromtxt(f, delimiter=',', skip_header=True)
+        else:
+            data = np.genfromtxt(itertools.islice(f, 0, n), delimiter=',', skip_header=True)
     row, col = data.shape
     return np.array([data[i, col - 1] for i in range(row)]), np.array(data.T[0])
 
@@ -87,14 +95,14 @@ def exclude_col(X, *args):
     return np.delete(X, args, axis=1)
 
 
+def exclude_row(X, *args):
+    return np.delete(X, args, axis=0)
+
+
 def accuracy(y, y_real):
     n = len(y)
     cnt = [1 if y[i] == y_real[i] else 0 for i in range(n)]
-    return sum(cnt) / n
-
-
-def exclude_col(X, *args):
-    return np.delete(X, args, axis=1)
+    return float(sum(cnt)) / n
 
 
 def find_zero_columns(X):
@@ -142,18 +150,17 @@ def preprocess(X, X_test=None):
 
 
 # TODO: split on three parts: learn, test_k, test
-def cv(X, y, k=(3, 10, 20, 40), log=True):
+def cv(X, y, k=(3, 5, 10, 15, 120), log=True):
     n = len(y)
     labels = list(map(lambda a: [], [None] * len(k)))
     for i in range(n):
+        knn = KNN(exclude_row(X, i), exclude_row(y, i))
+        knn.fit(X[i])
         for k_ind in range(len(k)):
-            knn = KNN(X, y)
-            knn.fit(X[i], one_left_out=i)
-            label = knn.predict(X[i], k[k_ind])
+            label = knn.predict_loo(k[k_ind])
             labels[k_ind].append(label[0])
-        if log:
-            print('Object {} classified'.format(i))
-
+        if log and (i + 1) % 100 == 0:
+            print('Object {} classified'.format(i + 1))
     acc = [accuracy(labels[i], y) for i in range(len(labels))]
     return acc
 
@@ -174,9 +181,9 @@ def write(path, data, ids):
 if 'darwin' in sys.platform:
     print('Running \'caffeinate\' on MacOSX to prevent the system from sleeping')
     subprocess.Popen('caffeinate')
-'''
-X, x_id = read_x('learn.csv', n=30)
-y, y_id = read_y('learn.csv', n=30)
+
+X, x_id = read_x('learn.csv')
+y, y_id = read_y('learn.csv')
 X = preprocess(X)
 
 print(cv(X, y))
@@ -190,3 +197,4 @@ if __name__ == '__main__':
     knn.fit(test)
     labels = knn.predict(X, 20, True)  # TODO: fix me!
     write('answer.csv', labels, test_id)
+'''
