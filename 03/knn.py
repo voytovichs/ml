@@ -191,7 +191,7 @@ if __name__ == '__main__':
     test, test_id = read_x('test.csv', exclude_y=False)
     X, test = preprocess(X, test)
     knn = KNN(X, y)
-    knn.fit(test)
+    knn.fit(test, True)
     labels = knn.predict(X, 10, True)
     write('answer.csv', labels, test_id)
 
