@@ -6,9 +6,6 @@ import subprocess
 import itertools
 import numpy as np
 
-
-# TODO: read http://www.machinelearning.ru/wiki/index.php?title=KNN
-
 class KNN:
     def __init__(self, X, y):
         self._X = X.A
@@ -22,7 +19,7 @@ class KNN:
         return self._euclid_distance(x, y)
 
     def fit(self, X, log=False):
-        self._neigh = []
+        self._neighbours = []
         for a in X.A:
             neighbours = []
             for i in range(self._n):
@@ -31,7 +28,7 @@ class KNN:
                 # format is (distance, label)
                 neighbours.append((self._distance(a, self._X[i]), self._y[i]))
             s = sorted(neighbours, key=lambda _p: _p[0])
-            self._neigh.append(s)
+            self._neighbours.append(s)
 
     def _compare_pair(self, a, b):
         if a[0] < b[0]:
@@ -52,19 +49,19 @@ class KNN:
         return s[0][0]
 
     def predict_loo(self, k):
-        if self._neigh is None:
+        if self._neighbours is None:
             raise Exception('Call fit first')
-        label = self._make_decision(self._neigh[0][:k])
+        label = self._make_decision(self._neighbours[0][:k])
         return np.array([label])
 
     def predict(self, X, k, log=False):
-        if self._neigh is None:
+        if self._neighbours is None:
             raise Exception('Call fit first')
         labels = []
         for i in range(len(X)):
             if log:
                 print('{} classified'.format(i))
-            label = self._make_decision(self._neigh[i][:k])
+            label = self._make_decision(self._neighbours[i][:k])
             labels.append(label)
         return np.array(labels)
 
@@ -139,7 +136,7 @@ def normalize(X, mean, std):
 
 
 def preprocess(X, X_test=None):
-    if X_test != None:
+    if X_test is not None:
         nx, nx_test = delete_zero_columns(X, X_test)
         mean, std = get_mean_and_std(nx)
         return normalize(nx, mean, std), normalize(nx_test, mean, std)
@@ -168,7 +165,6 @@ def cv(X, y, k=(3, 5, 10, 15, 120), log=True):
 def write(path, data, ids):
     tmp = 'haha.csv'
     np.savetxt(tmp, data, fmt='%d', header='id,label', delimiter=',', comments='')
-    lines = []
     with open(tmp, 'r') as f:
         lines = f.readlines()
     os.remove(tmp)
@@ -179,15 +175,16 @@ def write(path, data, ids):
 
 
 if 'darwin' in sys.platform:
-    print('Running \'caffeinate\' on MacOSX to prevent the system from sleeping')
+    # Running caffeinate on MacOSX to prevent the system from sleeping
     subprocess.Popen('caffeinate')
 
-X, x_id = read_x('learn.csv')
-y, y_id = read_y('learn.csv')
+'''
+X, x_id = read_x('learn.csv', n=4000)
+y, y_id = read_y('learn.csv', n=4000)
 X = preprocess(X)
-
 print(cv(X, y))
 '''
+
 if __name__ == '__main__':
     X, x_id = read_x('learn.csv')
     y, y_id = read_y('learn.csv')
@@ -195,6 +192,6 @@ if __name__ == '__main__':
     X, test = preprocess(X, test)
     knn = KNN(X, y)
     knn.fit(test)
-    labels = knn.predict(X, 20, True)  # TODO: fix me!
+    labels = knn.predict(X, 10, True)
     write('answer.csv', labels, test_id)
-'''
+
