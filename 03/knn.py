@@ -6,6 +6,7 @@ import subprocess
 import itertools
 import numpy as np
 
+
 class KNN:
     def __init__(self, X, y):
         self._X = X.A
@@ -38,6 +39,16 @@ class KNN:
         else:
             return 0
 
+    def _make_decision_weighted(self, neighbours):
+        dict = OrderedDict()
+        for a in neighbours:
+            if a[1] in dict:
+                dict[a[1]] += np.math.exp(float(1) / a[0])
+            else:
+                dict[a[1]] = np.math.exp(float(1) / a[0])
+        s = sorted(dict.items(), key=lambda _p: _p[1], reverse=True)
+        return s[0][0]
+
     def _make_decision(self, neighbours):
         dict = OrderedDict()
         for a in neighbours:
@@ -61,7 +72,7 @@ class KNN:
         for i in range(len(X)):
             if log:
                 print('{} classified'.format(i))
-            label = self._make_decision(self._neighbours[i][:k])
+            label = self._make_decision_weighted(self._neighbours[i][:k])
             labels.append(label)
         return np.array(labels)
 
@@ -179,8 +190,8 @@ if 'darwin' in sys.platform:
     subprocess.Popen('caffeinate')
 
 '''
-X, x_id = read_x('learn.csv', n=4000)
-y, y_id = read_y('learn.csv', n=4000)
+X, x_id = read_x('learn.csv', n=1000)
+y, y_id = read_y('learn.csv', n=1000)
 X = preprocess(X)
 print(cv(X, y))
 '''
