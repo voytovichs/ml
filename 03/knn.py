@@ -63,10 +63,10 @@ class KNN:
         return np.array(labels)
 
 
-def read_x(path, exclude_y=True, n=None, test=False):
+def read_x(path, exclude_y=True, n=None):
     with open(path, 'r') as f:
         '''itertools.islice(f, 0, n)'''
-        data = np.genfromtxt(f, delimiter=',', skip_header=not test)
+        data = np.genfromtxt(f, delimiter=',', skip_header=True)
     _row, col = data.shape
     print('shape {} {}'.format(_row, col))
     sub = 1 if exclude_y else 0
