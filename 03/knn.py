@@ -21,11 +21,13 @@ class KNN:
     def _distance(self, x, y):
         return self._euclid_distance(x, y)
 
-    def fit(self, X, one_left_out=None):
+    def fit(self, X, one_left_out=None, log=True):
         self._neigh = []
         for a in X.A:
             neighbours = []
             for i in range(self._n):
+                if log:
+                    print('Dealing with {}'.format(i + 1))
                 # format is (distance, label)
                 if one_left_out == i:
                     continue
@@ -182,7 +184,7 @@ print(cv(X, y))
 if __name__ == '__main__':
     X, x_id = read_x('learn.csv')
     y, y_id = read_y('learn.csv')
-    test, test_id = read_x('test.csv', exclude_y=False, test=True)
+    test, test_id = read_x('test.csv', exclude_y=False)
     X, test = preprocess(X, test)
     knn = KNN(X, y)
     knn.fit(test)
