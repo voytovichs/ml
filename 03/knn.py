@@ -24,8 +24,6 @@ class KNN:
         for a in X.A:
             neighbours = []
             for i in range(self._n):
-                if log:
-                    print('Dealing with {}'.format(i + 1))
                 # format is (distance, label)
                 neighbours.append((self._distance(a, self._X[i]), self._y[i]))
             s = sorted(neighbours, key=lambda _p: _p[0])
