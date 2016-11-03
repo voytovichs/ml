@@ -3,6 +3,16 @@ import itertools
 import numpy as np
 
 
+class LDA:
+    def __init__(self):
+        self._fitted = False
+
+    def fit(self, X, y):
+        pass
+
+    def predict(self, X):
+        pass
+
 
 def get_mean_and_std(x):
     mean = []
@@ -62,4 +72,4 @@ def read_y(path, n=None):
 X, x_id = read_x('learn.csv')
 y, y_id = read_y('learn.csv')
 test, test_id = read_x('test.csv', exclude_y=False)
-
+X, test = preprocess(X, test)
