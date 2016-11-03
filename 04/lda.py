@@ -7,11 +7,30 @@ class LDA:
     def __init__(self):
         self._fitted = False
 
+    def _get_mean_vector(self, x):
+        return np.true_divide(x, len(x))
+
+    def _split_by_clases(self, X):
+        return X
+
+    def _covariance(self, xs, means):
+        result = None
+        n = sum(map(lambda x: len(x), xs))
+        for k in range(len(xs)):
+            current = None
+            for row in xs[k].A:
+                new = np.true_divide((row - means[k]) * (row - means[k]).T,  (n - len(xs[k])))
+                current = new if current is None else current + new
+            result = current if result is None else result + current
+        return result
+
     def fit(self, X, y):
+        self._fitted = True
         pass
 
     def predict(self, X):
-        pass
+        if not self._fitted:
+            raise Exception('Call fit first')
 
 
 def get_mean_and_std(x):
@@ -68,8 +87,15 @@ def read_y(path, n=None):
     row, col = data.shape
     return np.array([data[i, col - 1] for i in range(row)]), np.array(data.T[0])
 
-
+m = np.matrix([[1,2,3], [4,5,6]])
+n = np.matrix([[7,8,9], [10,11,12]])
+lda = LDA()
+m_mean = lda._get_mean_vector(m)
+n_mean = lda._get_mean_vector(n)
+print(lda._covariance([m, n], [m_mean, n_mean]))
+'''
 X, x_id = read_x('learn.csv')
 y, y_id = read_y('learn.csv')
 test, test_id = read_x('test.csv', exclude_y=False)
 X, test = preprocess(X, test)
+'''
