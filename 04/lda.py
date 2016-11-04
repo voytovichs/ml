@@ -2,18 +2,16 @@ import itertools
 
 import numpy as np
 import sklearn
-from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-from sklearn.linear_model import LogisticRegression
 from random import shuffle
 
 
 class LDA:
     def __init__(self):
-        self._w = None
+        self._coef = None
 
     def _mean_vec(self, x):
         means = []
-        for column in X.T:
+        for column in x.T:
             means.append(column.mean())
         return np.array(means)
 
@@ -21,28 +19,31 @@ class LDA:
         x1 = []
         x2 = []
         iterable_x = X.A
-        for i in range(len(y)):  # TODO or visa versa!
+        for i in range(len(y)):
             if y[i] == 0:
                 x1.append(iterable_x[i])
             else:
                 x2.append(iterable_x[i])
         return np.matrix(x1), np.matrix(x2)
 
-    def _cov_matrix(self, xs, means):
-        covs = [np.cov(x) for x in xs]
+    def _cov_matrix(self, xs):
+        covs = [np.cov(x.T, bias=1) for x in xs]
         return np.average(covs, axis=0, weights=list(map(lambda x: len(x), xs)))
 
     def fit(self, X, y):
         x1, x2 = self._split_by_classes(X, y)
         x1_mean = self._mean_vec(x1)
         x2_mean = self._mean_vec(x2)
-        cov = self._cov_matrix([x1, x2], [x1_mean, x2_mean])
-        self._w = np.dot(np.linalg.inv(cov), (x2_mean - x1_mean))
+        cov = self._cov_matrix([x1, x2])
+        den = [len(x1), len(x2)]
+        self.coef = np.dot(np.linalg.inv(cov), (x1_mean - x2_mean).T)
+        self.coef -= np.dot(np.dot(1 / float(2) * (x1_mean - x2_mean).T, np.linalg.inv(cov)),
+                            (x1_mean - x2_mean))
+        self.coef += np.log(den[0] / float(den[1]))
 
     def predict(self, X):
-        if self._w is None:
-            raise Exception('Call fit first')
-        return np.dot(self._w, X)
+        result = np.dot(X, self.coef).A[0]
+        return (result > 0).astype(np.int)
 
 
 def get_mean_and_std(x):
@@ -134,6 +135,8 @@ X, x_id = read_x('learn.csv')
 y, y_id = read_y('learn.csv')
 test, test_id = read_x('test.csv', exclude_y=False)
 X, test = preprocess(X, test)
-a = LinearDiscriminantAnalysis(solver='lsqr')
+a = LDA()
 a.fit(X, y)
-print(cv(X, y, LogisticRegression))
+est = a.predict(X)
+print(auc(y, est))
+print(cv(X, y, LDA))
