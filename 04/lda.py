@@ -1,36 +1,48 @@
 import itertools
 
 import numpy as np
+import sklearn
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+from sklearn.linear_model import LogisticRegression
+from random import shuffle
 
 
 class LDA:
     def __init__(self):
-        self._fitted = False
+        self._w = None
 
-    def _get_mean_vector(self, x):
-        return np.true_divide(x, len(x))
+    def _mean_vec(self, x):
+        means = []
+        for column in X.T:
+            means.append(column.mean())
+        return np.array(means)
 
-    def _split_by_clases(self, X):
-        return X
+    def _split_by_classes(self, X, y):
+        x1 = []
+        x2 = []
+        iterable_x = X.A
+        for i in range(len(y)):  # TODO or visa versa!
+            if y[i] == 0:
+                x1.append(iterable_x[i])
+            else:
+                x2.append(iterable_x[i])
+        return np.matrix(x1), np.matrix(x2)
 
-    def _covariance(self, xs, means):
-        result = None
-        n = sum(map(lambda x: len(x), xs))
-        for k in range(len(xs)):
-            current = None
-            for row in xs[k].A:
-                new = np.true_divide((row - means[k]) * (row - means[k]).T,  (n - len(xs[k])))
-                current = new if current is None else current + new
-            result = current if result is None else result + current
-        return result
+    def _cov_matrix(self, xs, means):
+        covs = [np.cov(x) for x in xs]
+        return np.average(covs, axis=0, weights=list(map(lambda x: len(x), xs)))
 
     def fit(self, X, y):
-        self._fitted = True
-        pass
+        x1, x2 = self._split_by_classes(X, y)
+        x1_mean = self._mean_vec(x1)
+        x2_mean = self._mean_vec(x2)
+        cov = self._cov_matrix([x1, x2], [x1_mean, x2_mean])
+        self._w = np.dot(np.linalg.inv(cov), (x2_mean - x1_mean))
 
     def predict(self, X):
-        if not self._fitted:
+        if self._w is None:
             raise Exception('Call fit first')
+        return np.dot(self._w, X)
 
 
 def get_mean_and_std(x):
@@ -87,15 +99,41 @@ def read_y(path, n=None):
     row, col = data.shape
     return np.array([data[i, col - 1] for i in range(row)]), np.array(data.T[0])
 
-m = np.matrix([[1,2,3], [4,5,6]])
-n = np.matrix([[7,8,9], [10,11,12]])
-lda = LDA()
-m_mean = lda._get_mean_vector(m)
-n_mean = lda._get_mean_vector(n)
-print(lda._covariance([m, n], [m_mean, n_mean]))
-'''
+
+def auc(y, y_predicted):
+    return sklearn.metrics.roc_auc_score(y, y_predicted)
+
+
+def split(X, y):
+    row, col = X.shape
+    for_test = [i % 2 == 0 for i in range(row)]
+    shuffle(for_test)
+    X_learn, X_test, y_learn, y_test = [], [], [], []
+    for i in range(row):
+        if for_test[i]:
+            X_test.append([X[i, k] for k in range(col)])
+            y_test.append(y[i])
+        else:
+            X_learn.append([X[i, k] for k in range(col)])
+            y_learn.append(y[i])
+    return np.matrix(X_learn), np.matrix(X_test), np.array(y_learn), np.array(y_test)
+
+
+def cv(X, y, model, n=100):
+    aucs = []
+    for i in range(n):
+        X_l, X_t, y_l, y_t = split(X, y)
+        r = model()
+        r.fit(X_l, y_l)
+        y_est = r.predict(X_t)
+        aucs.append(auc(y_t, y_est))
+    return np.median(aucs)
+
+
 X, x_id = read_x('learn.csv')
 y, y_id = read_y('learn.csv')
 test, test_id = read_x('test.csv', exclude_y=False)
 X, test = preprocess(X, test)
-'''
+a = LinearDiscriminantAnalysis(solver='lsqr')
+a.fit(X, y)
+print(cv(X, y, LogisticRegression))
