@@ -41,13 +41,6 @@ class LDA:
         cov = self._cov_matrix([x1, x2])
         n = len(X)
         den = np.array([len(x1) / float(n), len(x2) / float(n)])
-        '''
-        self.coef = np.dot(np.linalg.inv(cov), (means[0] - means[1]).T)
-        self.coef -= np.dot(np.dot(1 / float(2) * (means[0] - means[1]).T, np.linalg.inv(cov)),
-                            (means[0] - means[1]))
-        self.coef += np.log(den[0] / float(den[1]))
-        '''
-
         self.w = np.linalg.lstsq(cov, means.T)[0].T
         self.int = (-0.5 * np.diag(np.dot(means, self.w.T)) + np.log(den))
         self.w = np.array(self.w[1, :] - self.w[0, :], ndmin=2)
@@ -55,6 +48,7 @@ class LDA:
 
     def predict(self, X):
         result = np.array((np.dot(X, self.w.T) + self.int)).ravel()
+        result -= result.mean()
         return (result > 0).astype(np.int)
 
 
@@ -203,7 +197,6 @@ X, test = split_matrix(multiply_features(concatenate_matrices(X, test), dim=2), 
 m, s = get_mean_and_std(X)
 X, y = get_rid_of_outliers(X, y, m, s, m=15)
 
-#a = LinearDiscriminantAnalysis(store_covariance=True, solver='lsqr')
 a = LDA()
 a.fit(X, y)
 est = a.predict(X)
