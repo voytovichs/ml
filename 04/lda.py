@@ -1,7 +1,10 @@
 import itertools
+import os
 
 import numpy as np
 import sklearn
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+from sklearn.linear_model import LogisticRegression
 from random import shuffle
 
 
@@ -28,21 +31,30 @@ class LDA:
 
     def _cov_matrix(self, xs):
         covs = [np.cov(x.T, bias=1) for x in xs]
-        return np.average(covs, axis=0, weights=list(map(lambda x: len(x), xs)))
+        n = sum([len(xs[0]), len(xs[1])])
+        return np.average(covs, axis=0, weights=[len(xs[0]) / float(n), len(xs[1]) / float(n)])
 
     def fit(self, X, y):
-        x1, x2 = self._split_by_classes(X, y)
-        x1_mean = self._mean_vec(x1)
-        x2_mean = self._mean_vec(x2)
+        X = X.A
+        x1, x2 = X[y == 0, :], X[y == 1, :]
+        means = np.asarray([x1.mean(0), x2.mean(0)])
         cov = self._cov_matrix([x1, x2])
-        den = [len(x1), len(x2)]
-        self.coef = np.dot(np.linalg.inv(cov), (x1_mean - x2_mean).T)
-        self.coef -= np.dot(np.dot(1 / float(2) * (x1_mean - x2_mean).T, np.linalg.inv(cov)),
-                            (x1_mean - x2_mean))
+        n = len(X)
+        den = np.array([len(x1) / float(n), len(x2) / float(n)])
+        '''
+        self.coef = np.dot(np.linalg.inv(cov), (means[0] - means[1]).T)
+        self.coef -= np.dot(np.dot(1 / float(2) * (means[0] - means[1]).T, np.linalg.inv(cov)),
+                            (means[0] - means[1]))
         self.coef += np.log(den[0] / float(den[1]))
+        '''
+
+        self.coef = np.linalg.lstsq(cov, means.T)[0].T
+        self.coef = np.array(self.coef[1, :] - self.coef[0, :], ndmin=2)
+        self.intercept = (-0.5 * np.diag(np.dot(means, self.coef.T)) + np.log(den))
+        self.intercept = np.array(self.intercept[1] + self.intercept[0], ndmin=1)
 
     def predict(self, X):
-        result = np.dot(X, self.coef).A[0]
+        result = np.array((np.dot(X, self.coef.T) + self.intercept)).ravel()
         return (result > 0).astype(np.int)
 
 
@@ -131,12 +143,71 @@ def cv(X, y, model, n=100):
     return np.median(aucs)
 
 
+def write(path, data, ids):
+    tmp = 'haha.csv'
+    np.savetxt(tmp, data, fmt='%d', header='id,label', delimiter=',', comments='')
+    with open(tmp, 'r') as f:
+        lines = f.readlines()
+    os.remove(tmp)
+    for i in range(1, len(lines)):
+        lines[i] = '{0:g},{1}'.format(ids[i - 1], lines[i])
+    with open(path, 'w') as f:
+        f.writelines(lines)
+
+
+def conc_column(a, b):
+    return np.hstack((a, b))
+
+
+def concatenate_matrices(a, b):
+    return np.vstack((a, b))
+
+
+def multiply_features(X, dim=3):
+    dims = [np.matrix.copy(X.T)]
+    for d in range(1, dim):
+        new_dimension = []
+        n = dims[d - 1].shape[0]
+        for i1 in range(n):
+            for i2 in range(i1, n):
+                a1 = dims[d - 1][i1]
+                a2 = dims[d - 1][i2]
+                new_dimension.append(np.squeeze(np.asarray(np.multiply(a1, a2))))
+        dims.append(np.matrix(new_dimension))
+    result = dims[0].T
+    for i in range(1, len(dims)):
+        result = conc_column(result, dims[i].T)
+    return result
+
+
+def split_matrix(a, bound=336):
+    return a[:bound], a[bound:]
+
+
+def get_rid_of_outliers(x, y, mean, std, m=3):
+    to_delete = set()
+    row, col = x.shape
+    for c in range(col):
+        for r in range(row):
+            if abs(x[r, c] - mean[c]) >= m * std[c]:
+                to_delete.add(r)
+    print('{0} rows have outline values'.format(len(to_delete)))
+    return exclude_row(x, *to_delete), exclude_row(y, *to_delete)
+
+
 X, x_id = read_x('learn.csv')
 y, y_id = read_y('learn.csv')
 test, test_id = read_x('test.csv', exclude_y=False)
 X, test = preprocess(X, test)
+X, test = split_matrix(multiply_features(concatenate_matrices(X, test), dim=2), len(X))
+m, s = get_mean_and_std(X)
+X, y = get_rid_of_outliers(X, y, m, s, m=15)
+
+#a = LinearDiscriminantAnalysis(store_covariance=True, solver='lsqr')
 a = LDA()
 a.fit(X, y)
 est = a.predict(X)
+y_test = a.predict(test)
+write('answer.csv', y_test, test_id)
 print(auc(y, est))
 print(cv(X, y, LDA))
