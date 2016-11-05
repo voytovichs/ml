@@ -48,13 +48,13 @@ class LDA:
         self.coef += np.log(den[0] / float(den[1]))
         '''
 
-        self.coef = np.linalg.lstsq(cov, means.T)[0].T
-        self.coef = np.array(self.coef[1, :] - self.coef[0, :], ndmin=2)
-        self.intercept = (-0.5 * np.diag(np.dot(means, self.coef.T)) + np.log(den))
-        self.intercept = np.array(self.intercept[1] + self.intercept[0], ndmin=1)
+        self.w = np.linalg.lstsq(cov, means.T)[0].T
+        self.int = (-0.5 * np.diag(np.dot(means, self.w.T)) + np.log(den))
+        self.w = np.array(self.w[1, :] - self.w[0, :], ndmin=2)
+        self.int = np.array(self.int[1] - self.int[0], ndmin=1)
 
     def predict(self, X):
-        result = np.array((np.dot(X, self.coef.T) + self.intercept)).ravel()
+        result = np.array((np.dot(X, self.w.T) + self.int)).ravel()
         return (result > 0).astype(np.int)
 
 
