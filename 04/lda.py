@@ -2,15 +2,12 @@ import itertools
 import os
 
 import numpy as np
-import sklearn
-from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-from sklearn.linear_model import LogisticRegression
 from random import shuffle
 
 
 class LDA:
     def __init__(self):
-        self._coef = None
+        self.w = None
 
     def _mean_vec(self, x):
         means = []
@@ -34,7 +31,7 @@ class LDA:
         n = sum([len(xs[0]), len(xs[1])])
         return np.average(covs, axis=0, weights=[len(xs[0]) / float(n), len(xs[1]) / float(n)])
 
-    def _regr(self, x, y):
+    def _solve_regr(self, x, y):
         first = x.dot(x.T)
         second = np.linalg.inv(first)
         third = second.dot(x)
@@ -48,7 +45,7 @@ class LDA:
         cov = self._cov_matrix([x1, x2])
         n = len(X)
         den = np.array([len(x1) / float(n), len(x2) / float(n)])
-        self.w = self._regr(cov, means.T).T
+        self.w = self._solve_regr(cov, means.T).T
         self.int = (-0.5 * np.diag(np.dot(means, self.w.T)) + np.log(den))
         self.w = np.array(self.w[1, :] - self.w[0, :], ndmin=2)
         self.int = np.array(self.int[1] - self.int[0], ndmin=1)
@@ -114,10 +111,6 @@ def read_y(path, n=None):
     return np.array([data[i, col - 1] for i in range(row)]), np.array(data.T[0])
 
 
-def auc(y, y_predicted):
-    return sklearn.metrics.roc_auc_score(y, y_predicted)
-
-
 def split(X, y):
     row, col = X.shape
     for_test = [i % 2 == 0 for i in range(row)]
@@ -131,17 +124,6 @@ def split(X, y):
             X_learn.append([X[i, k] for k in range(col)])
             y_learn.append(y[i])
     return np.matrix(X_learn), np.matrix(X_test), np.array(y_learn), np.array(y_test)
-
-
-def cv(X, y, model, n=100):
-    aucs = []
-    for i in range(n):
-        X_l, X_t, y_l, y_t = split(X, y)
-        r = model()
-        r.fit(X_l, y_l)
-        y_est = r.predict(X_t)
-        aucs.append(auc(y_t, y_est))
-    return np.median(aucs)
 
 
 def write(path, data, ids):
@@ -209,5 +191,3 @@ a.fit(X, y)
 est = a.predict(X)
 y_test = a.predict(test)
 write('answer.csv', y_test, test_id)
-print(auc(y, est))
-print(cv(X, y, LDA))
