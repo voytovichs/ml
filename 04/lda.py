@@ -34,6 +34,13 @@ class LDA:
         n = sum([len(xs[0]), len(xs[1])])
         return np.average(covs, axis=0, weights=[len(xs[0]) / float(n), len(xs[1]) / float(n)])
 
+    def _regr(self, x, y):
+        first = x.dot(x.T)
+        second = np.linalg.inv(first)
+        third = second.dot(x)
+        fourth = (y - y.mean()).T
+        return fourth.dot(third).T
+
     def fit(self, X, y):
         X = X.A
         x1, x2 = X[y == 0, :], X[y == 1, :]
@@ -41,7 +48,7 @@ class LDA:
         cov = self._cov_matrix([x1, x2])
         n = len(X)
         den = np.array([len(x1) / float(n), len(x2) / float(n)])
-        self.w = np.linalg.lstsq(cov, means.T)[0].T
+        self.w = self._regr(cov, means.T).T
         self.int = (-0.5 * np.diag(np.dot(means, self.w.T)) + np.log(den))
         self.w = np.array(self.w[1, :] - self.w[0, :], ndmin=2)
         self.int = np.array(self.int[1] - self.int[0], ndmin=1)
