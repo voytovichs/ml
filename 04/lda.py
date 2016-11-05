@@ -8,6 +8,7 @@ from random import shuffle
 class LDA:
     def __init__(self):
         self.w = None
+        self.int = None
 
     def _mean_vec(self, x):
         means = []
@@ -51,6 +52,8 @@ class LDA:
         self.int = np.array(self.int[1] - self.int[0], ndmin=1)
 
     def predict(self, X):
+        if self.int is None or self.w is None:
+            raise Error('Call fit first')
         result = np.array((np.dot(X, self.w.T) + self.int)).ravel()
         result -= result.mean()
         return (result > 0).astype(np.int)
