@@ -1,26 +1,32 @@
-import numpy as np
 from collections import namedtuple
+
+import numpy as np
 
 
 class DecisionTree:
-    def __init__(self):
+    def __init__(self, min_leaf_members=20):
         self.fit_called_ = False
+        self.min_leaf_members_ = min_leaf_members
         self.tree_ = {}  # Node number -> split condition
-        self.SplitCondition_ = collections.namedtuple('SplitCondition', 'feature threshold')
+        self.SplitCondition_ = namedtuple('SplitCondition', 'feature threshold')
+        self.Leaf_ = namedtuple('Leaf', 'zeros ones')
 
-    def partition_stop_condition_(self, labels, partition=(float(5) / float(6))):
-        zero_members = len(filter(labels, lambda a: a == 0))
-        return zero_members >= partition * len(labels) or zero_members <= (1 - partition) * len(labels)
+    def partition_stop_condition__(self, labels, partition=(float(5) / float(6))):
+        one_members = sum(labels)
+        return one_members >= partition * len(labels) or one_members <= (1 - partition) * len(labels)
 
     def build_stop_condition_(self, labels):
-        return self.partition_stop_condition_(labels)
+        if len(labels) <= self.min_leaf_members_:
+            return True
+        return self.partition_stop_condition__(labels)
 
     def select_split_condition_(self, data, labels):
-        raise Error('Not implemented')
+        raise Exception('Not implemented')
 
     def split_on_condition_(self, split_condition, data, labels):
         a, b = [], []
         a_lbs, b_lbs = [], []
+
         for (entry, label) in zip(data, labels):
             if entry[split_condition.feature] <= split_condition.threshold:
                 a.append(entry)
@@ -28,27 +34,52 @@ class DecisionTree:
             else:
                 b.append(entry)
                 b_lbs.append(label)
+
         return a, a_lbs, b, b_lbs
 
+    def create_leaf_(self, labels):
+        ones = sum(labels)
+        zeros = len(labels) - ones
+        return self.Leaf_(zeros, ones)
+
     def build_tree_(self, node_num, data, labels):
+
         if self.build_stop_condition_(labels):
+            self.tree_[node_num] = self.create_leaf_(labels)
             return
+
         sc = self.select_split_condition_(data, labels)
         self.tree_[node_num] = sc
         a, a_lbs, b, b_lbs = self.split_on_condition_(sc, data, labels)
+
         self.build_tree_(node_num * 2, a, a_lbs)
         self.build_tree_(node_num * 2 + 1, b, b_lbs)
 
-    def metric_value_(self, labels):
-        raise Error('Not implemented')
+    def metric_value_(self, a_lbs, b_lbs):
+        raise Exception('Not implemented')
 
     def fit(self, data, labels):
         self.build_tree_(1, data, labels)
         self.fit_called_ = True
 
+    def predict_(self, node_num, x):
+        node = self.tree_[node_num]
+
+        if node is self.Leaf_:
+            return self.zeros / (self.zeros + self.ones)
+
+        if node is not self.SplitCondition_:
+            raise Exception('The node {0} is neither a leaf nor a split condition: {1}'
+                            .format(node_num, node))
+
+        if x[node.feature] <= node.threshhold:
+            return self.predict_(node_num * 2, x)
+        else:
+            return self.predict_(node_num * 2 + 1, x)
+
     def predict(self, data):
         if self.fit_called_:
-            raise Error('Call fit first')
+            raise Exception('Call fit first')
         return [0] ** len(data)
 
 
@@ -93,6 +124,7 @@ def write_answer(path, data, ids):
         f.writelines(lines)
 
 
+'''
 x, x_id = read_x('learn.csv')
 y, y_id = read_y('learn.csv')
 test, test_id = read_x('test.csv', exclude_y=False)
@@ -101,3 +133,10 @@ tree = DecisionTree()
 tree.fit(x, y)
 y_test = tree.predict(test)
 write('answer.csv', y_test, test_id)
+'''
+tree = DecisionTree()
+leaf = tree.Leaf_(0, 1)
+print(leaf.ones)
+a = (0, 1)
+a[1] += 1
+print(a[1])
