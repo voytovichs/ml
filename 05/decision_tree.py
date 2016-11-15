@@ -98,13 +98,13 @@ class DecisionTree:
         node = self.tree_[node_num]
 
         if isinstance(node, self.Leaf_):
-            return node.zeros / (node.zeros + node.ones)
+            return node.zeros / float(node.zeros + node.ones)
 
         if not isinstance(node, self.SplitCondition_):
             raise Exception('The node {0} is neither a leaf nor a split condition: {1}'
                             .format(node_num, node))
 
-        if x[node.feature] <= node.threshhold:
+        if x[node.feature] <= node.threshold:
             return self.predict_(node_num * 2, x)
         else:
             return self.predict_(node_num * 2 + 1, x)
