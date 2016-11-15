@@ -21,7 +21,24 @@ class DecisionTree:
         return self.partition_stop_condition__(labels)
 
     def select_split_condition_(self, data, labels):
-        raise Exception('Not implemented')
+        best_sc = None
+        best_score = float('-inf')
+
+        if len(data) == 0:
+            raise Exception('To create split condition \'data\' must not be emtpy')
+        m = len(data[0])
+
+        for feature in len(m):
+            for sample in data:
+                sc = self.SplitCondition_(feature, sample[feature])
+                _, a_lbs, _, b_lbs = self.split_on_condition_(sc, data, labels)
+                score = self.metric_value_(a_lbs, b_lbs)
+
+                if score > best_score:
+                    best_score = score
+                    best_sc = sc
+
+        return best_sc
 
     def split_on_condition_(self, split_condition, data, labels):
         a, b = [], []
