@@ -1,12 +1,15 @@
 from collections import namedtuple
 
+import itertools
 import numpy as np
+import os
 
 
 class DecisionTree:
-    def __init__(self, min_leaf_members=20):
+    def __init__(self, min_leaf_members=20, score_threshold=0.1):
         self.fit_called_ = False
         self.min_leaf_members_ = min_leaf_members
+        self.score_threshold = score_threshold
         self.tree_ = {}  # Node number -> split condition
         self.SplitCondition_ = namedtuple('SplitCondition', 'feature threshold')
         self.Leaf_ = namedtuple('Leaf', 'zeros ones')
@@ -26,10 +29,10 @@ class DecisionTree:
 
         if len(data) == 0:
             raise Exception('To create split condition \'data\' must not be emtpy')
-        m = len(data[0])
+        m = data.shape[1]
 
-        for feature in len(m):
-            for sample in data:
+        for feature in range(m):
+            for sample in data.A:
                 sc = self.SplitCondition_(feature, sample[feature])
                 _, a_lbs, _, b_lbs = self.split_on_condition_(sc, data, labels)
                 score = self.metric_value_(a_lbs, b_lbs)
@@ -44,7 +47,7 @@ class DecisionTree:
         a, b = [], []
         a_lbs, b_lbs = [], []
 
-        for (entry, label) in zip(data, labels):
+        for (entry, label) in zip(data.A, labels):
             if entry[split_condition.feature] <= split_condition.threshold:
                 a.append(entry)
                 a_lbs.append(label)
@@ -52,14 +55,14 @@ class DecisionTree:
                 b.append(entry)
                 b_lbs.append(label)
 
-        return a, a_lbs, b, b_lbs
+        return np.matrix(a), a_lbs, np.matrix(b), b_lbs
 
     def create_leaf_(self, labels):
         ones = sum(labels)
         zeros = len(labels) - ones
         return self.Leaf_(zeros, ones)
 
-    def build_tree_(self, node_num, data, labels):
+    def build_tree_(self, node_num, last_score, data, labels):
 
         if self.build_stop_condition_(labels):
             self.tree_[node_num] = self.create_leaf_(labels)
@@ -69,23 +72,35 @@ class DecisionTree:
         self.tree_[node_num] = sc
         a, a_lbs, b, b_lbs = self.split_on_condition_(sc, data, labels)
 
-        self.build_tree_(node_num * 2, a, a_lbs)
-        self.build_tree_(node_num * 2 + 1, b, b_lbs)
+        score = self.metric_value_(a_lbs, b_lbs)
+        if abs(last_score - score) < self.score_threshold:
+            self.tree_[node_num] = self.create_leaf_(labels)
+            return
+
+        self.build_tree_(node_num * 2, score, a, a_lbs)
+        self.build_tree_(node_num * 2 + 1, score, b, b_lbs)
+
+    def entropy__(self, labels):
+        if len(labels) == 0:
+            return 0
+        p = sum(labels) / float(len(labels))
+        q = 1 - p
+        return - (p * np.log(p)) - (q * np.log(q))
 
     def metric_value_(self, a_lbs, b_lbs):
-        raise Exception('Not implemented')
+        return -self.entropy__(a_lbs) - self.entropy__(b_lbs)
 
     def fit(self, data, labels):
-        self.build_tree_(1, data, labels)
+        self.build_tree_(1, float('-inf'), data, labels)
         self.fit_called_ = True
 
     def predict_(self, node_num, x):
         node = self.tree_[node_num]
 
-        if node is self.Leaf_:
-            return self.zeros / (self.zeros + self.ones)
+        if isinstance(node, self.Leaf_):
+            return node.zeros / (node.zeros + node.ones)
 
-        if node is not self.SplitCondition_:
+        if not isinstance(node, self.SplitCondition_):
             raise Exception('The node {0} is neither a leaf nor a split condition: {1}'
                             .format(node_num, node))
 
@@ -95,9 +110,13 @@ class DecisionTree:
             return self.predict_(node_num * 2 + 1, x)
 
     def predict(self, data):
-        if self.fit_called_:
+        if not self.fit_called_:
             raise Exception('Call fit first')
-        return [0] ** len(data)
+        labels = []
+        for sample in data.A:
+            label = self.predict_(1, sample)
+            labels.append(label)
+        return np.array(labels)
 
 
 def exclude_col(X, *args):
@@ -141,19 +160,11 @@ def write_answer(path, data, ids):
         f.writelines(lines)
 
 
-'''
-x, x_id = read_x('learn.csv')
-y, y_id = read_y('learn.csv')
+x, x_id = read_x('learn.csv', n=100)
+y, y_id = read_y('learn.csv', n=1000)
 test, test_id = read_x('test.csv', exclude_y=False)
 
-tree = DecisionTree()
+tree = DecisionTree(min_leaf_members=5)
 tree.fit(x, y)
 y_test = tree.predict(test)
-write('answer.csv', y_test, test_id)
-'''
-tree = DecisionTree()
-leaf = tree.Leaf_(0, 1)
-print(leaf.ones)
-a = (0, 1)
-a[1] += 1
-print(a[1])
+write_answer('answer.csv', y_test, test_id)
