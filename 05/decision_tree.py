@@ -159,7 +159,7 @@ def write_answer(path, data, ids):
         lines = f.readlines()
     os.remove(tmp)
     for i in range(1, len(lines)):
-        lines[i] = '{0:g},{1}'.format(ids[i - 1], lines[i])
+        lines[i] = '{0:g},{1:f}'.format(ids[i - 1], lines[i])
     with open(path, 'w') as f:
         f.writelines(lines)
 
