@@ -83,8 +83,12 @@ class DecisionTree:
     def entropy__(self, labels):
         if len(labels) == 0:
             return 0
+
         p = sum(labels) / float(len(labels))
         q = 1 - p
+
+        if p == 0 or q == 0:
+            return 0
         return - (p * np.log(p)) - (q * np.log(q))
 
     def metric_value_(self, a_lbs, b_lbs):
@@ -160,8 +164,8 @@ def write_answer(path, data, ids):
         f.writelines(lines)
 
 
-x, x_id = read_x('learn.csv', n=100)
-y, y_id = read_y('learn.csv', n=1000)
+x, x_id = read_x('learn.csv')
+y, y_id = read_y('learn.csv')
 test, test_id = read_x('test.csv', exclude_y=False)
 
 tree = DecisionTree(min_leaf_members=5)
