@@ -9,9 +9,8 @@ class DecisionTree:
         self.SplitCondition_ = collections.namedtuple('SplitCondition', 'feature threshold')
 
     def partition_stop_condition_(self, labels, partition=(float(5) / float(6))):
-        zero_class_members = len(filter(labels, lambda a: a == 0))
-        return zero_class_members >= partition * len(labels) or \
-               zero_class_members <= (1 - partition) * len(labels)
+        zero_members = len(filter(labels, lambda a: a == 0))
+        return zero_members >= partition * len(labels) or zero_members <= (1 - partition) * len(labels)
 
     def build_stop_condition_(self, labels):
         return self.partition_stop_condition_(labels)
@@ -44,7 +43,7 @@ class DecisionTree:
         raise Error('Not implemented')
 
     def fit(self, data, labels):
-        self.build_tree_(data, labels)
+        self.build_tree_(1, data, labels)
         self.fit_called_ = True
 
     def predict(self, data):
