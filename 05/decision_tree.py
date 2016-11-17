@@ -6,15 +6,16 @@ import os
 
 
 class DecisionTree:
-    def __init__(self, min_leaf_members=20, score_threshold=0.1):
+    def __init__(self, min_leaf_members=100, score_threshold=0.1, split_bounds=20):
         self.fit_called_ = False
         self.min_leaf_members_ = min_leaf_members
         self.score_threshold = score_threshold
         self.tree_ = {}  # Node number -> split condition
         self.SplitCondition_ = namedtuple('SplitCondition', 'feature threshold')
         self.Leaf_ = namedtuple('Leaf', 'zeros ones')
+        self.split_bounds_ = split_bounds
 
-    def partition_stop_condition__(self, labels, partition=(float(5) / float(6))):
+    def partition_stop_condition__(self, labels, partition=(float(6) / float(7))):
         one_members = sum(labels)
         return one_members >= partition * len(labels) or one_members <= (1 - partition) * len(labels)
 
@@ -23,7 +24,7 @@ class DecisionTree:
             return True
         return self.partition_stop_condition__(labels)
 
-    def select_split_condition_(self, data, labels):
+    def select_split_condition_uniform_(self, data, labels):
         best_sc = None
         best_score = float('-inf')
 
@@ -32,15 +33,23 @@ class DecisionTree:
         m = data.shape[1]
 
         for feature in range(m):
-            for sample in data.A:
-                sc = self.SplitCondition_(feature, sample[feature])
-                _, a_lbs, _, b_lbs = self.split_on_condition_(sc, data, labels)
-                score = self.metric_value_(a_lbs, b_lbs)
+            map_to_feature = np.vectorize(lambda x: x[feature])
+            mapped = map_to_feature(data.A)
+            min_sample = np.min(mapped)
+            max_sample = np.max(mapped)
 
-                if score > best_score:
+            step = (max_sample - min_sample) / (self.split_bounds_ + 1)
+            bounds = [(min_sample + step)]
+            for i in range(1, self.split_bounds_ + 1):
+                bounds.append(bounds[i - 1] + step)
+
+            for bound in bounds:
+                sc = self.SplitCondition_(feature, bound)
+                a, a_lbs, b, b_lbs = self.split_on_condition_(sc, data, labels)
+                score = self.metric_value_(a_lbs, b_lbs)
+                if (score > best_score):
                     best_score = score
                     best_sc = sc
-
         return best_sc
 
     def split_on_condition_(self, split_condition, data, labels):
@@ -68,7 +77,7 @@ class DecisionTree:
             self.tree_[node_num] = self.create_leaf_(labels)
             return
 
-        sc = self.select_split_condition_(data, labels)
+        sc = self.select_split_condition_uniform_(data, labels)
         self.tree_[node_num] = sc
         a, a_lbs, b, b_lbs = self.split_on_condition_(sc, data, labels)
 
@@ -168,7 +177,8 @@ x, x_id = read_x('learn.csv')
 y, y_id = read_y('learn.csv')
 test, test_id = read_x('test.csv', exclude_y=False)
 
-tree = DecisionTree(min_leaf_members=5)
+tree = DecisionTree(min_leaf_members=100, split_bounds=20)
 tree.fit(x, y)
 y_test = tree.predict(test)
 write_answer('answer.csv', y_test, test_id)
+print('Done')
