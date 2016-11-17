@@ -33,14 +33,13 @@ class DecisionTree:
         m = data.shape[1]
 
         for feature in range(m):
-            map_to_feature = np.vectorize(lambda x: x[feature])
-            mapped = map_to_feature(data.A)
+            mapped = map(lambda x: x[feature], data.A)
             min_sample = np.min(mapped)
             max_sample = np.max(mapped)
 
             step = (max_sample - min_sample) / (self.split_bounds_ + 1)
             bounds = [(min_sample + step)]
-            for i in range(1, self.split_bounds_ + 1):
+            for i in range(1, self.split_bounds_):
                 bounds.append(bounds[i - 1] + step)
 
             for bound in bounds:
