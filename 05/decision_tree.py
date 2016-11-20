@@ -90,7 +90,10 @@ class DecisionTree:
             self.tree_[node_num] = self.create_leaf_(labels)
             return
 
+        print('building {}...'.format(node_num * 2))
         self.build_tree_(node_num * 2, score, a, a_lbs)
+
+        print('building {}...'.format(node_num * 2 + 1))
         self.build_tree_(node_num * 2 + 1, score, b, b_lbs)
 
     def entropy__(self, labels):
@@ -173,14 +176,6 @@ def read_x(path, exclude_y=True, n=None, mapping=None):
             map(lambda row: map(lambda a: float(a) if is_number(a) else map_char_to_num(a, mapping), row), data))
 
     data = np.matrix(data)
-    '''
-    nan_columns = set()
-    for row in data:
-        for i in range(len(row)):
-            if not is_number(row[i]):
-                nan_columns.add(i)
-    print(nan_columns)
-    '''
     sub = 1 if exclude_y else 0  # Get rid of labels
 
     _row, col = data.shape
@@ -215,7 +210,7 @@ x, x_id, mapping = read_x('learn.csv')
 y, y_id = read_y('learn.csv')
 test, test_id, _ = read_x('test.csv', exclude_y=False, mapping=mapping)
 
-tree = DecisionTree(min_leaf_members=10, split_bounds=50)
+tree = DecisionTree(min_leaf_members=20, split_bounds=20)
 tree.fit(np.matrix(x), y)
 y_test = tree.predict(np.matrix(test))
 write_answer('answer.csv', y_test, test_id)
