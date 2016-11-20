@@ -1,5 +1,5 @@
 from collections import namedtuple
-
+from sklearn.preprocessing import MinMaxScaler
 import itertools
 import numpy as np
 import os
@@ -15,9 +15,9 @@ class DecisionTree:
         self.Leaf_ = namedtuple('Leaf', 'zeros ones')
         self.split_bounds_ = split_bounds
 
-    def partition_stop_condition__(self, labels, partition=(float(6) / float(7))):
-        one_members = sum(labels)
-        return one_members >= partition * len(labels) or one_members <= (1 - partition) * len(labels)
+    def partition_stop_condition__(self, labels, partition=(float(8) / float(9))):
+        one_members = sum(labels) / len(labels)
+        return one_members >= partition or one_members <= (1 - partition)
 
     def build_stop_condition_(self, labels):
         if len(labels) <= self.min_leaf_members_:
@@ -33,7 +33,7 @@ class DecisionTree:
         m = data.shape[1]
 
         for feature in range(m):
-            mapped = map(lambda x: x[feature], data.A)  # todo replace with np.vectorize
+            mapped = map(lambda x: x[feature], data.A)  # todo: replace with np.vectorize
             min_sample = np.min(mapped)
             max_sample = np.max(mapped)
 
@@ -41,6 +41,8 @@ class DecisionTree:
             bounds = [(min_sample + step)]
             for i in range(1, self.split_bounds_):
                 bounds.append(bounds[i - 1] + step)
+            bounds.append(np.median(mapped))
+            bounds.append(np.mean(mapped))
 
             for bound in bounds:
                 sc = self.SplitCondition_(feature, bound)
@@ -135,19 +137,47 @@ def exclude_col(X, *args):
     return np.delete(X, args, axis=1)
 
 
-def read_x(path, exclude_y=True, n=None):
-    with open(path, 'r') as f:
-        if n is None:
-            data = np.genfromtxt(f, delimiter=',', skip_header=True)
-        else:
-            data = np.genfromtxt(itertools.islice(f, 0, n), delimiter=',', skip_header=True)
+def is_number(string):
+    try:
+        float(string)
+        return True
+    except ValueError:
+        return False
 
+
+def map_char_to_num(char, mapping):
+    if char in mapping:
+        return mapping[char]
+    index = len(mapping)
+    mapping[char] = index
+    return index
+
+
+def read_x(path, exclude_y=True, n=None, mapping=None):
+    data = []
+    if mapping is None:
+        mapping = {}
+
+    with open(path, 'r') as f:
+        data = f.readlines()[1:]
+        data = map(lambda s: s.split(','), data)
+        data = list(map(lambda row: map(lambda a: float(a) if is_number(a) else map_char_to_num(a, mapping), row), data))
+
+    data = np.matrix(data)
+    '''
+    nan_columns = set()
+    for row in data:
+        for i in range(len(row)):
+            if not is_number(row[i]):
+                nan_columns.add(i)
+    print(nan_columns)
+    '''
     sub = 1 if exclude_y else 0  # Get rid of labels
 
     _row, col = data.shape
     print('shape {} {}'.format(_row, col))
 
-    return np.matrix(exclude_col(data, 0, col - sub)), np.array(data.T[0])  # data, id's
+    return np.matrix(exclude_col(data, 0, col - sub)), np.array(data.T.A[0]), mapping  # data, id's, mapping
 
 
 def read_y(path, n=None):
@@ -162,7 +192,7 @@ def read_y(path, n=None):
 
 def write_answer(path, data, ids):
     tmp = 'haha.csv'
-    np.savetxt(tmp, data, fmt='%d', header='id,label', delimiter=',', comments='')
+    np.savetxt(tmp, data, fmt='%f', header='id,label', delimiter=',', comments='')
     with open(tmp, 'r') as f:
         lines = f.readlines()
     os.remove(tmp)
@@ -172,12 +202,16 @@ def write_answer(path, data, ids):
         f.writelines(lines)
 
 
-x, x_id = read_x('learn.csv')
+x, x_id, mapping = read_x('learn.csv')
 y, y_id = read_y('learn.csv')
-test, test_id = read_x('test.csv', exclude_y=False)
+#test, test_id, _ = read_x('test.csv', exclude_y=False, mapping=mapping)
 
-tree = DecisionTree(min_leaf_members=100, split_bounds=20)
-tree.fit(x, y)
-y_test = tree.predict(test)
+scaler = MinMaxScaler()
+scaler.fit(x)
+x = scaler.transform(x)
+#test = scaler.transform(test)
+
+tree = DecisionTree(min_leaf_members=20, split_bounds=50, score_threshold=0.05)
+tree.fit(np.matrix(x), y)
+y_test = tree.predict(np.matrix(test))
 write_answer('answer.csv', y_test, test_id)
-print('Done')
