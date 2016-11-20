@@ -99,7 +99,7 @@ class DecisionTree:
 
         if p == 0 or q == 0:
             return 0
-        return - (p * np.log(p)) - (q * np.log(q))
+        return - (p * np.log2(p)) - (q * np.log2(q))
 
     def metric_value_(self, a_lbs, b_lbs):
         return -self.entropy__(a_lbs) - self.entropy__(b_lbs)
