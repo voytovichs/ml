@@ -211,11 +211,11 @@ def write_answer(path, data, ids):
         f.writelines(lines)
 
 
-x, x_id, mapping = read_x('fake_learn.csv')
-y, y_id = read_y('fake_learn.csv')
+x, x_id, mapping = read_x('learn.csv')
+y, y_id = read_y('learn.csv')
 test, test_id, _ = read_x('test.csv', exclude_y=False, mapping=mapping)
 
 tree = DecisionTree(min_leaf_members=10, split_bounds=50)
 tree.fit(np.matrix(x), y)
 y_test = tree.predict(np.matrix(test))
-write_answer('answer.csv', y_test, x_id)
+write_answer('answer.csv', y_test, test_id)
