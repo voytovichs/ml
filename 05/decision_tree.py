@@ -1,12 +1,11 @@
-from collections import namedtuple
-from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import StandardScaler
 import itertools
 import numpy as np
 import os
 
 
 class DecisionTree:
-    def __init__(self, min_leaf_members=100, score_threshold=0.1, split_bounds=20):
+    def __init__(self, min_leaf_members=100, score_threshold=float('-inf'), split_bounds=20):
         self.fit_called_ = False
         self.min_leaf_members_ = min_leaf_members
         self.score_threshold = score_threshold
@@ -15,7 +14,7 @@ class DecisionTree:
         self.Leaf_ = namedtuple('Leaf', 'zeros ones')
         self.split_bounds_ = split_bounds
 
-    def partition_stop_condition__(self, labels, partition=(float(8) / float(9))):
+    def partition_stop_condition__(self, labels, partition=(float(49) / float(50))):
         one_members = sum(labels) / len(labels)
         return one_members >= partition or one_members <= (1 - partition)
 
@@ -33,7 +32,7 @@ class DecisionTree:
         m = data.shape[1]
 
         for feature in range(m):
-            mapped = map(lambda x: x[feature], data.A)  # todo: replace with np.vectorize
+            mapped = map(lambda x: x[feature], data.A)
             min_sample = np.min(mapped)
             max_sample = np.max(mapped)
 
@@ -82,6 +81,10 @@ class DecisionTree:
         self.tree_[node_num] = sc
         a, a_lbs, b, b_lbs = self.split_on_condition_(sc, data, labels)
 
+        if len(a_lbs) < self.min_leaf_members_ or len(b_lbs) < self.min_leaf_members_:
+            self.tree_[node_num] = self.create_leaf_(data, labels)
+            return
+
         score = self.metric_value_(a_lbs, b_lbs)
         if abs(last_score - score) < self.score_threshold:
             self.tree_[node_num] = self.create_leaf_(labels)
@@ -102,7 +105,12 @@ class DecisionTree:
         return - (p * np.log2(p)) - (q * np.log2(q))
 
     def metric_value_(self, a_lbs, b_lbs):
-        return -self.entropy__(a_lbs) - self.entropy__(b_lbs)
+        entire_set_e = self.entropy__(a_lbs + b_lbs)
+        left_w = len(a_lbs) / float(len(a_lbs) + len(b_lbs))
+        right_w = len(b_lbs) / float(len(a_lbs) + len(b_lbs))
+        left_leaf_e = self.entropy__(a_lbs) * left_w
+        right_leaf_e = self.entropy__(b_lbs) * right_w
+        return entire_set_e - (left_leaf_e + right_leaf_e)
 
     def fit(self, data, labels):
         self.build_tree_(1, float('-inf'), data, labels)
@@ -161,7 +169,8 @@ def read_x(path, exclude_y=True, n=None, mapping=None):
     with open(path, 'r') as f:
         data = f.readlines()[1:]
         data = map(lambda s: s.split(','), data)
-        data = list(map(lambda row: map(lambda a: float(a) if is_number(a) else map_char_to_num(a, mapping), row), data))
+        data = list(
+            map(lambda row: map(lambda a: float(a) if is_number(a) else map_char_to_num(a, mapping), row), data))
 
     data = np.matrix(data)
     '''
@@ -204,14 +213,9 @@ def write_answer(path, data, ids):
 
 x, x_id, mapping = read_x('learn.csv')
 y, y_id = read_y('learn.csv')
-#test, test_id, _ = read_x('test.csv', exclude_y=False, mapping=mapping)
+test, test_id, _ = read_x('test.csv', exclude_y=False, mapping=mapping)
 
-scaler = MinMaxScaler()
-scaler.fit(x)
-x = scaler.transform(x)
-#test = scaler.transform(test)
-
-tree = DecisionTree(min_leaf_members=20, split_bounds=50, score_threshold=0.05)
+tree = DecisionTree(min_leaf_members=10, split_bounds=50)
 tree.fit(np.matrix(x), y)
 y_test = tree.predict(np.matrix(test))
 write_answer('answer.csv', y_test, test_id)
