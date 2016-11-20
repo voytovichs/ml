@@ -1,4 +1,4 @@
-from sklearn.preprocessing import StandardScaler
+from collections import namedtuple
 import itertools
 import numpy as np
 import os
@@ -82,7 +82,7 @@ class DecisionTree:
         a, a_lbs, b, b_lbs = self.split_on_condition_(sc, data, labels)
 
         if len(a_lbs) < self.min_leaf_members_ or len(b_lbs) < self.min_leaf_members_:
-            self.tree_[node_num] = self.create_leaf_(data, labels)
+            self.tree_[node_num] = self.create_leaf_(labels)
             return
 
         score = self.metric_value_(a_lbs, b_lbs)
@@ -206,16 +206,16 @@ def write_answer(path, data, ids):
         lines = f.readlines()
     os.remove(tmp)
     for i in range(1, len(lines)):
-        lines[i] = '{0:g},{1:f}'.format(ids[i - 1], float(lines[i]))
+        lines[i] = '{0:g},{1:f}\n'.format(ids[i - 1], float(lines[i]))
     with open(path, 'w') as f:
         f.writelines(lines)
 
 
-x, x_id, mapping = read_x('learn.csv')
-y, y_id = read_y('learn.csv')
+x, x_id, mapping = read_x('fake_learn.csv')
+y, y_id = read_y('fake_learn.csv')
 test, test_id, _ = read_x('test.csv', exclude_y=False, mapping=mapping)
 
 tree = DecisionTree(min_leaf_members=10, split_bounds=50)
 tree.fit(np.matrix(x), y)
 y_test = tree.predict(np.matrix(test))
-write_answer('answer.csv', y_test, test_id)
+write_answer('answer.csv', y_test, x_id)
