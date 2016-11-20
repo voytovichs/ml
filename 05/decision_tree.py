@@ -237,7 +237,7 @@ test, test_id, _ = read_x('test.csv', exclude_y=False, mapping=mapping)
 
 tree = DecisionTree(stop_leaf_size=30,
                     split_bound_number=30,
-                    stop_partition=float(7) / float(8))
+                    stop_partition=float(9) / float(10))
 tree.fit(np.matrix(x), y)
 y_test = tree.predict(np.matrix(test))
 write_answer('answer.csv', y_test, test_id)
