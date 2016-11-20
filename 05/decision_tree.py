@@ -161,11 +161,10 @@ def map_char_to_num(char, mapping):
     return index
 
 
-def read_x(path, exclude_y=True, n=None, mapping=None):
-    data = []
+def read_x(path, exclude_y=True, mapping=None):
     if mapping is None:
         mapping = {}
-
+    data = []
     with open(path, 'r') as f:
         data = f.readlines()[1:]
         data = map(lambda s: s.split(','), data)
@@ -173,14 +172,14 @@ def read_x(path, exclude_y=True, n=None, mapping=None):
             map(lambda row: map(lambda a: float(a) if is_number(a) else map_char_to_num(a, mapping), row), data))
 
     data = np.matrix(data)
-    '''
+
     nan_columns = set()
     for row in data:
         for i in range(len(row)):
             if not is_number(row[i]):
                 nan_columns.add(i)
     print(nan_columns)
-    '''
+    data = exclude_col(data, *nan_columns)
     sub = 1 if exclude_y else 0  # Get rid of labels
 
     _row, col = data.shape
@@ -213,7 +212,7 @@ def write_answer(path, data, ids):
 
 x, x_id, mapping = read_x('learn.csv')
 y, y_id = read_y('learn.csv')
-test, test_id, _ = read_x('test.csv', exclude_y=False, mapping=mapping)
+test, test_id, _ = read_x('test.csv', exclude_y=False)
 
 tree = DecisionTree(min_leaf_members=10, split_bounds=50)
 tree.fit(np.matrix(x), y)
