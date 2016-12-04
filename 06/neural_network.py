@@ -1,11 +1,12 @@
 import itertools
+import os
 import random
 
 import numpy as np
 
 
 class FeedforwardNetwork:
-    def __init__(self, layers, learning_rate=1, epochs=100, mini_batch=1000):
+    def __init__(self, layers, learning_rate, epochs, mini_batch):
         self.fitted_ = False
         self.biases_ = [np.random.randn(y, 1) for y in layers[1:]]
         self.weights_ = [np.random.randn(y, x) for x, y in zip(layers[:-1], layers[1:])]
@@ -124,7 +125,28 @@ def preprocess(X, X_test=None):
         return normalize(X, mean, std)
 
 
-X, x_id = read_x('learn.csv')
+def write_answer(path, data, ids):
+    tmp = 'haha.csv'
+    np.savetxt(tmp, data, fmt='%f', header='id,label', delimiter=',', comments='')
+    with open(tmp, 'r') as f:
+        lines = f.readlines()
+    os.remove(tmp)
+    for i in range(1, len(lines)):
+        lines[i] = '{0:g},{1:f}\n'.format(ids[i - 1], float(lines[i]))
+    with open(path, 'w') as f:
+        f.writelines(lines)
+
+
+x, x_id = read_x('learn.csv')
 y, y_id = read_y('learn.csv')
 test, test_id = read_x('test.csv', exclude_y=False)
-X, test = preprocess(X, test)
+x, test = preprocess(x, test)
+
+factors = x.shape[0]
+output_clases = 2
+nn = FeedforwardNetwork(layers=[factors, 924 * 42, 5 * 42, 42, output_clases], learning_rate=42, epochs=42 * 42,
+                        mini_batch=42 * 42 * 42)
+nn.fit(x, y)
+y_test = nn.predict(test)
+
+write_answer('answer.csv', y_test, test_id)
