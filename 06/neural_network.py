@@ -1,5 +1,73 @@
 import itertools
+import random
+
 import numpy as np
+
+
+class FeedforwardNetwork:
+    def __init__(self, layers, learning_rate=1, epochs=100, mini_batch=1000):
+        self.fitted_ = False
+        self.biases_ = [np.random.randn(y, 1) for y in layers[1:]]
+        self.weights_ = [np.random.randn(y, x) for x, y in zip(layers[:-1], layers[1:])]
+
+        self.num_layers_ = len(layers)
+        self.layers_ = layers
+        self.learning_rate_ = learning_rate
+        self.epochs_ = epochs
+        self.mini_batch_size_ = mini_batch
+
+        print('Initialized Network:')
+        print(' Layers={}'.format(self.layers_))
+        print(' LearningRate={}'.format(self.learning_rate_))
+        print(' Epochs={}'.format(self.epochs_))
+        print(' MiniBatchSize={}'.format(self.mini_batch_size_))
+
+    def update_batch(self, batch, learning_rate):
+        nabla_b = [np.zeros(b.shape) for b in self.biases_]
+        nabla_w = [np.zeros(w.shape) for w in self.weights_]
+        for x, y in batch:
+            delta_nabla_b, delta_nabla_w = self.backprop(x, y)
+            nabla_b = [nb + dnb for nb, dnb in zip(nabla_b, delta_nabla_b)]
+            nabla_w = [nw + dnw for nw, dnw in zip(nabla_w, delta_nabla_w)]
+        self.weights_ = [w - (learning_rate / len(batch)) * nw
+                         for w, nw in zip(self.weights_, nabla_w)]
+        self.biases_ = [b - (learning_rate / len(batch)) * nb
+                        for b, nb in zip(self.biases_, nabla_b)]
+
+    def gradient_decent(self, training_data, epochs, mini_batch_size, learning_rate):
+        n = len(training_data)
+        for j in xrange(epochs):
+            random.shuffle(training_data)
+            mini_batches = [
+                training_data[k:k + mini_batch_size]
+                for k in xrange(0, n, mini_batch_size)]
+            for mini_batch in mini_batches:
+                self.update_batch(mini_batch, learning_rate)
+                print("Epoch {0} complete".format(j))
+
+    def feedforward(self, a):
+        for b, w in zip(self.biases_, self.weights_):
+            a = self.sigmoid(np.dot(w, a) + b)
+        return a
+
+    def fit(self, x, y):
+        training_data = zip(x, y)
+        self.gradient_decent(training_data, self.epochs_, self.mini_batch_size_, self.learning_rate_)
+        self.fitted_ = True
+
+    def predict(self, test_data):
+        if self.fitted_:
+            raise Exception('Call fit first!')
+        test_results = [(np.argmax(self.feedforward(x)), y) for (x, y) in test_data]
+        return sum(int(x == y) for (x, y) in test_results)
+
+
+def sigmoid(x):
+    return 1.0 / (1.0 + np.exp(-x))
+
+
+def sigmoid_prime(x):
+    return sigmoid(x) * (1 - sigmoid(x))
 
 
 def exclude_col(X, *args):
