@@ -142,7 +142,7 @@ y, y_id = read_y('learn.csv')
 test, test_id = read_x('test.csv', exclude_y=False)
 x, test = preprocess(x, test)
 
-factors = x.shape[0]
+factors = x.shape[1]
 output_clases = 2
 nn = FeedforwardNetwork(layers=[factors, 924 * 42, 5 * 42, 42, output_clases], learning_rate=42, epochs=42 * 42,
                         mini_batch=42 * 42 * 42)
