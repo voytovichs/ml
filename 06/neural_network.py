@@ -30,25 +30,21 @@ class FeedforwardNetwork:
             delta_nabla_b, delta_nabla_w = self.backprop(x, y)
             nabla_b = [nb + dnb for nb, dnb in zip(nabla_b, delta_nabla_b)]
             nabla_w = [nw + dnw for nw, dnw in zip(nabla_w, delta_nabla_w)]
-        self.weights_ = [w - (learning_rate / len(batch)) * nw
-                         for w, nw in zip(self.weights_, nabla_w)]
-        self.biases_ = [b - (learning_rate / len(batch)) * nb
-                        for b, nb in zip(self.biases_, nabla_b)]
+        self.weights_ = [w - (learning_rate / len(batch)) * nw for w, nw in zip(self.weights_, nabla_w)]
+        self.biases_ = [b - (learning_rate / len(batch)) * nb for b, nb in zip(self.biases_, nabla_b)]
 
     def gradient_descent(self, training_data, epochs, mini_batch_size, learning_rate):
         n = len(training_data)
-        for j in xrange(epochs):
+        for j in range(epochs):
             random.shuffle(training_data)
-            mini_batches = [
-                training_data[k:k + mini_batch_size]
-                for k in xrange(0, n, mini_batch_size)]
+            mini_batches = [training_data[k:k + mini_batch_size] for k in range(0, n, mini_batch_size)]
             for mini_batch in mini_batches:
                 self.update_batch(mini_batch, learning_rate)
                 print("Epoch {0} complete".format(j))
 
     def feedforward(self, a):
         for b, w in zip(self.biases_, self.weights_):
-            a = self.sigmoid(np.dot(w, a) + b)
+            a = sigmoid(np.dot(w, a) + b)
         return a
 
     def fit(self, x, y):
@@ -71,12 +67,12 @@ def sigmoid_prime(x):
     return sigmoid(x) * (1 - sigmoid(x))
 
 
-def exclude_col(X, *args):
-    return np.delete(X, args, axis=1)
+def exclude_col(matrix, *args):
+    return np.delete(matrix, args, axis=1)
 
 
-def exclude_row(X, *args):
-    return np.delete(X, args, axis=0)
+def exclude_row(matrix, *args):
+    return np.delete(matrix, args, axis=0)
 
 
 def read_x(path, exclude_y=True, n=None):
@@ -90,9 +86,9 @@ def read_x(path, exclude_y=True, n=None):
     return np.matrix(exclude_col(data, 0, col - sub)), np.array(data.T[0])  # data, id's
 
 
-def normalize(X, mean, std):
+def normalize(x, mean, std):
     new_x = []
-    for col, m, s in zip(X.T.A, mean, std):
+    for col, m, s in zip(x.T.A, mean, std):
         new_x.append((col - m) / s)
     return np.matrix(new_x).T
 
@@ -116,13 +112,13 @@ def read_y(path, n=None):
     return np.array([data[i, col - 1] for i in range(row)]), np.array(data.T[0])
 
 
-def preprocess(X, X_test=None):
-    if X_test is not None:
-        mean, std = get_mean_and_std(X)
-        return normalize(X, mean, std), normalize(X_test, mean, std)
+def preprocess(x, x_test=None):
+    if x_test is not None:
+        mean, std = get_mean_and_std(x)
+        return normalize(x, mean, std), normalize(x_test, mean, std)
     else:
-        mean, std = get_mean_and_std(X)
-        return normalize(X, mean, std)
+        mean, std = get_mean_and_std(x)
+        return normalize(x, mean, std)
 
 
 def write_answer(path, data, ids):
