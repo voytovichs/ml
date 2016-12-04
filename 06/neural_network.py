@@ -35,7 +35,7 @@ class FeedforwardNetwork:
         self.biases_ = [b - (learning_rate / len(batch)) * nb
                         for b, nb in zip(self.biases_, nabla_b)]
 
-    def gradient_decent(self, training_data, epochs, mini_batch_size, learning_rate):
+    def gradient_descent(self, training_data, epochs, mini_batch_size, learning_rate):
         n = len(training_data)
         for j in xrange(epochs):
             random.shuffle(training_data)
@@ -53,7 +53,7 @@ class FeedforwardNetwork:
 
     def fit(self, x, y):
         training_data = zip(x, y)
-        self.gradient_decent(training_data, self.epochs_, self.mini_batch_size_, self.learning_rate_)
+        self.gradient_descent(training_data, self.epochs_, self.mini_batch_size_, self.learning_rate_)
         self.fitted_ = True
 
     def predict(self, test_data):
