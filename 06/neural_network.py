@@ -23,40 +23,33 @@ class FeedforwardNetwork:
         print(' Epochs={}'.format(self.epochs_))
         print(' MiniBatchSize={}'.format(self.mini_batch_size_))
 
-    def update_batch(self, batch, learning_rate):
-        nabla_b = [np.zeros(b.shape) for b in self.biases_]
-        nabla_w = [np.zeros(w.shape) for w in self.weights_]
-        for x, y in batch:
-            delta_nabla_b, delta_nabla_w = self.backprop(x, y)
-            nabla_b = [nb + dnb for nb, dnb in zip(nabla_b, delta_nabla_b)]
-            nabla_w = [nw + dnw for nw, dnw in zip(nabla_w, delta_nabla_w)]
-        self.weights_ = [w - (learning_rate / len(batch)) * nw for w, nw in zip(self.weights_, nabla_w)]
-        self.biases_ = [b - (learning_rate / len(batch)) * nb for b, nb in zip(self.biases_, nabla_b)]
-
-    def gradient_descent(self, training_data, epochs, mini_batch_size, learning_rate):
-        n = len(training_data)
+    def gradient_descent_(self, data, epochs, batch_size, learning_rate):
+        n = len(data)
         for j in range(epochs):
-            random.shuffle(training_data)
-            mini_batches = [training_data[k:k + mini_batch_size] for k in range(0, n, mini_batch_size)]
-            for mini_batch in mini_batches:
-                self.update_batch(mini_batch, learning_rate)
-                print("Epoch {0} complete".format(j))
-
-    def feedforward(self, a):
-        for b, w in zip(self.biases_, self.weights_):
-            a = sigmoid(np.dot(w, a) + b)
-        return a
+            random.shuffle(data)
+            mini_batches = [data[k:k + batch_size] for k in range(0, n, batch_size)]
+            for batch in mini_batches:
+                nabla_b = [np.zeros(b.shape) for b in self.biases_]
+                nabla_w = [np.zeros(w.shape) for w in self.weights_]
+                for x, y in batch:
+                    delta_nabla_b, delta_nabla_w = self.step_(x, y)
+                    nabla_b = [nb + dnb for nb, dnb in zip(nabla_b, delta_nabla_b)]
+                    nabla_w = [nw + dnw for nw, dnw in zip(nabla_w, delta_nabla_w)]
+                self.weights_ = [w - (learning_rate / len(batch)) * nw for w, nw in zip(self.weights_, nabla_w)]
+                self.biases_ = [b - (learning_rate / len(batch)) * nb for b, nb in zip(self.biases_, nabla_b)]
 
     def fit(self, x, y):
         training_data = zip(x, y)
-        self.gradient_descent(training_data, self.epochs_, self.mini_batch_size_, self.learning_rate_)
+        self.gradient_descent_(training_data, self.epochs_, self.mini_batch_size_, self.learning_rate_)
         self.fitted_ = True
 
-    def predict(self, test_data):
+    def predict(self, x):
         if self.fitted_:
             raise Exception('Call fit first!')
-        test_results = [(np.argmax(self.feedforward(x)), y) for (x, y) in test_data]
-        return sum(int(x == y) for (x, y) in test_results)
+        result = x.copy()
+        for b, w in zip(self.biases_, self.weights_):
+             result = sigmoid(np.dot(w, result) + b)
+        return result
 
 
 def sigmoid(x):
@@ -139,8 +132,7 @@ test, test_id = read_x('test.csv', exclude_y=False)
 x, test = preprocess(x, test)
 
 factors = x.shape[1]
-output_clases = 2
-nn = FeedforwardNetwork(layers=[factors, 924 * 42, 5 * 42, 42, output_clases], learning_rate=42, epochs=42 * 42,
+nn = FeedforwardNetwork(layers=[factors, 924 * 42, 5 * 42, 42, 1], learning_rate=42, epochs=42 * 42,
                         mini_batch=42 * 42 * 42)
 nn.fit(x, y)
 y_test = nn.predict(test)
