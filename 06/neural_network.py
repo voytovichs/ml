@@ -23,32 +23,68 @@ class FeedforwardNetwork:
         print(' Epochs={}'.format(self.epochs_))
         print(' MiniBatchSize={}'.format(self.mini_batch_size_))
 
-    def gradient_descent_(self, data, epochs, batch_size, learning_rate):
-        n = len(data)
+    def update_(self, batch, learning_rate):
+        d_b = [np.zeros(b.shape) for b in self.biases_]
+        d_w = [np.zeros(w.shape) for w in self.weights_]
+        for x, y in batch:
+            delta_d_b, delta_d_w = self.backprop_(np.array(x), y)
+            d_b = [nb + dnb for nb, dnb in zip(d_b, delta_d_b)]
+            d_w = [nw + dnw for nw, dnw in zip(d_w, delta_d_w)]
+        self.weights_ = [w - (learning_rate / len(batch)) * nw for w, nw in zip(self.weights_, d_w)]
+        self.biases_ = [b - (learning_rate / len(batch)) * nb for b, nb in zip(self.biases_, d_b)]
+
+    def gradient_descent(self, training_data, epochs, mini_batch_size, learning_rate):
+        n = len(training_data)
         for j in range(epochs):
-            random.shuffle(data)
-            mini_batches = [data[k:k + batch_size] for k in range(0, n, batch_size)]
-            for batch in mini_batches:
-                nabla_b = [np.zeros(b.shape) for b in self.biases_]
-                nabla_w = [np.zeros(w.shape) for w in self.weights_]
-                for x, y in batch:
-                    delta_nabla_b, delta_nabla_w = self.step_(x, y)
-                    nabla_b = [nb + dnb for nb, dnb in zip(nabla_b, delta_nabla_b)]
-                    nabla_w = [nw + dnw for nw, dnw in zip(nabla_w, delta_nabla_w)]
-                self.weights_ = [w - (learning_rate / len(batch)) * nw for w, nw in zip(self.weights_, nabla_w)]
-                self.biases_ = [b - (learning_rate / len(batch)) * nb for b, nb in zip(self.biases_, nabla_b)]
+            random.shuffle(training_data)
+            mini_batches = [training_data[k:k + mini_batch_size] for k in range(0, n, mini_batch_size)]
+            for mini_batch in mini_batches:
+                self.update_(mini_batch, learning_rate)
+            print('Epoch {0} complete'.format(j))
+
+    def backprop_(self, x, y):
+        nabla_b = [np.zeros(b.shape) for b in self.biases_]
+        nabla_w = [np.zeros(w.shape) for w in self.weights_]
+        # feedforward
+        activation = np.matrix(x).T.A
+        activations = [activation]  # list to store all the activations, layer by layer
+        zs = []  # list to store all the z vectors, layer by layer
+        for b, w in zip(self.biases_, self.weights_):
+            z = np.dot(w, activation) + b
+            zs.append(z)
+            activation = sigmoid(z)
+            activations.append(activation)
+        # backward pass
+        delta = self.cost_derivative(activations[-1], y) * sigmoid_derivative(zs[-1])
+        nabla_b[-1] = delta
+        nabla_w[-1] = np.dot(delta, activations[-2].transpose())
+        for l in xrange(2, self.num_layers_):
+            z = zs[-l]
+            sp = sigmoid_derivative(z)
+            delta = np.dot(self.weights_[-l + 1].transpose(), delta) * sp
+            nabla_b[-l] = delta
+            nabla_w[-l] = np.dot(delta, activations[-l - 1].transpose())
+        return (nabla_b, nabla_w)
+
+    def cost_derivative(self, output_activations, y):
+        """Return the vector of partial derivatives \partial C_x /
+        \partial a for the output activations."""
+        return (output_activations - y)
 
     def fit(self, x, y):
         training_data = zip(x, y)
-        self.gradient_descent_(training_data, self.epochs_, self.mini_batch_size_, self.learning_rate_)
+        self.gradient_descent(training_data, self.epochs_, self.mini_batch_size_, self.learning_rate_)
         self.fitted_ = True
 
-    def predict(self, x):
-        if self.fitted_:
+    def predict(self, test_x):
+        if not self.fitted_:
             raise Exception('Call fit first!')
-        result = x.copy()
-        for b, w in zip(self.biases_, self.weights_):
-             result = sigmoid(np.dot(w, result) + b)
+        result = []
+        for x in test_x:
+            a = np.matrix(x).T.A
+            for b, w in zip(self.biases_, self.weights_):
+                a = sigmoid(np.dot(w, a) + b)
+            result.append(a[0, 0])
         return result
 
 
@@ -56,7 +92,7 @@ def sigmoid(x):
     return 1.0 / (1.0 + np.exp(-x))
 
 
-def sigmoid_prime(x):
+def sigmoid_derivative(x):
     return sigmoid(x) * (1 - sigmoid(x))
 
 
@@ -76,20 +112,20 @@ def read_x(path, exclude_y=True, n=None):
             data = np.genfromtxt(itertools.islice(f, 0, n), delimiter=',', skip_header=True)
     _row, col = data.shape
     sub = 1 if exclude_y else 0
-    return np.matrix(exclude_col(data, 0, col - sub)), np.array(data.T[0])  # data, id's
+    return np.matrix(exclude_col(data, 0, col - sub)).A, np.array(data.T[0])  # data, id's
 
 
 def normalize(x, mean, std):
     new_x = []
-    for col, m, s in zip(x.T.A, mean, std):
+    for col, m, s in zip(x.T, mean, std):
         new_x.append((col - m) / s)
-    return np.matrix(new_x).T
+    return np.matrix(new_x).T.A
 
 
 def get_mean_and_std(x):
     mean = []
     std = []
-    for row in x.T.A:
+    for row in x.T:
         mean.append(row.mean())
         std.append(row.std())
     return mean, std
@@ -115,7 +151,7 @@ def preprocess(x, x_test=None):
 
 
 def write_answer(path, data, ids):
-    tmp = 'haha.csv'
+    tmp = '~tmp.trash'
     np.savetxt(tmp, data, fmt='%f', header='id,label', delimiter=',', comments='')
     with open(tmp, 'r') as f:
         lines = f.readlines()
@@ -132,8 +168,11 @@ test, test_id = read_x('test.csv', exclude_y=False)
 x, test = preprocess(x, test)
 
 factors = x.shape[1]
-nn = FeedforwardNetwork(layers=[factors, 924 * 42, 5 * 42, 42, 1], learning_rate=42, epochs=42 * 42,
-                        mini_batch=42 * 42 * 42)
+output_clases = 1
+nn = FeedforwardNetwork(layers=[factors, factors * 5, 700, 100, 1],
+                        learning_rate=42,
+                        epochs=1000,
+                        mini_batch=1000)
 nn.fit(x, y)
 y_test = nn.predict(test)
 
