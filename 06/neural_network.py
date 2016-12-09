@@ -42,7 +42,7 @@ class FeedforwardNetwork:
                 self.update_(mini_batch, learning_rate)
             print('Epoch {0} complete'.format(j))
 
-    def backprop_(self, x, y):
+    def gradient_(self, x, y):
         nabla_b = [np.zeros(b.shape) for b in self.biases_]
         nabla_w = [np.zeros(w.shape) for w in self.weights_]
 
