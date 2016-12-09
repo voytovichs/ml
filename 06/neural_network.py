@@ -111,7 +111,8 @@ def read_x(path, exclude_y=True, n=None):
 
 
 def normalize(x, mean, std):
-    return [(col - m) / s for col, m, s in zip(x.T, mean, std)]
+    normalized = [(col - m) / s for col, m, s in zip(x.T, mean, std)]
+    return np.matrix(normalized).T.A
 
 
 def get_mean_and_std(x):
