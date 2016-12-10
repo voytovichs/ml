@@ -40,14 +40,14 @@ class NeuralNetwork:
 
     def fit(self, x, y):
         for epoch in range(self.epochs_):
-            d_b = [np.zeros(b.shape) for b in self.biases_]
-            d_w = [np.zeros(w.shape) for w in self.weights_]
+            c_b = [np.zeros(b.shape) for b in self.biases_]
+            c_w = [np.zeros(w.shape) for w in self.weights_]
             for sample, answer in zip(x, y):
-                delta_d_b, delta_d_w = self.backpropagation_(np.array(sample), answer)
-                d_b = [nb + dnb for nb, dnb in zip(d_b, delta_d_b)]
-                d_w = [nw + dnw for nw, dnw in zip(d_w, delta_d_w)]
-            self.weights_ = [w - (self.learning_rate_ / len(x)) * nw for w, nw in zip(self.weights_, d_w)]
-            self.biases_ = [b - (self.learning_rate_ / len(x)) * nb for b, nb in zip(self.biases_, d_b)]
+                delta_c_b, delta_c_w = self.backpropagation_(np.array(sample), answer)
+                c_b = [nb + dnb for nb, dnb in zip(c_b, delta_c_b)]
+                c_w = [nw + dnw for nw, dnw in zip(c_w, delta_c_w)]
+            self.weights_ = [w - (self.learning_rate_ / len(x)) * nw for w, nw in zip(self.weights_, c_w)]
+            self.biases_ = [b - (self.learning_rate_ / len(x)) * nb for b, nb in zip(self.biases_, c_b)]
             print('Finished {0}'.format(epoch))
         self.fitted_ = True
 
@@ -131,6 +131,7 @@ def write_answer(path, data, ids):
     with open(path, 'w') as f:
         f.writelines(lines)
 
+np.random.seed(1)
 
 x, x_id = read_x('learn.csv')
 y, y_id = read_y('learn.csv')
@@ -138,7 +139,7 @@ test, test_id = read_x('test.csv', exclude_y=False)
 
 samples, factors = x.shape
 output_clases = 1
-nn = NeuralNetwork(layers=[factors, factors / 5, 1], learning_rate=10, epochs=100)
+nn = NeuralNetwork(layers=[factors, factors / 10, 1], learning_rate=0.2, epochs=1000)
 nn.fit(x, y)
 y_test = nn.predict(test)
 
