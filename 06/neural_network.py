@@ -5,70 +5,50 @@ import random
 import numpy as np
 
 
-class FeedforwardNetwork:
-    def __init__(self, layers, learning_rate, epochs, mini_batch):
+class NeuralNetwork:
+    def __init__(self, layers, learning_rate, epochs):
         self.fitted_ = False
-        self.biases_ = [np.random.randn(y, 1) for y in layers[1:]]
-        self.weights_ = [np.random.randn(y, x) for x, y in zip(layers[:-1], layers[1:])]
+        self.biases_ = [np.random.randn(a, 1) for a in layers[1:]]
+        self.weights_ = [np.random.randn(a, b) for b, a in zip(layers[:-1], layers[1:])]
 
         self.num_layers_ = len(layers)
         self.layers_ = layers
         self.learning_rate_ = learning_rate
         self.epochs_ = epochs
-        self.batch_size_ = mini_batch
 
         print('Initialized Network:')
         print(' Layers={}'.format(self.layers_))
         print(' LearningRate={}'.format(self.learning_rate_))
         print(' Epochs={}'.format(self.epochs_))
-        print(' BatchSize={}'.format(self.batch_size_))
 
-    def update_(self, batch, learning_rate):
-        d_b = [np.zeros(b.shape) for b in self.biases_]
-        d_w = [np.zeros(w.shape) for w in self.weights_]
-        for x, y in batch:
-            delta_d_b, delta_d_w = self.gradient_(np.array(x), y)
-            d_b = [nb + dnb for nb, dnb in zip(d_b, delta_d_b)]
-            d_w = [nw + dnw for nw, dnw in zip(d_w, delta_d_w)]
-        self.weights_ = [w - (learning_rate / len(batch)) * nw for w, nw in zip(self.weights_, d_w)]
-        self.biases_ = [b - (learning_rate / len(batch)) * nb for b, nb in zip(self.biases_, d_b)]
-
-    def gradient_descent(self, training_data, epochs, mini_batch_size, learning_rate):
-        n = len(training_data)
-        for j in range(epochs):
-            random.shuffle(training_data)
-            mini_batches = [training_data[k:k + mini_batch_size] for k in range(0, n, mini_batch_size)]
-            for mini_batch in mini_batches:
-                self.update_(mini_batch, learning_rate)
-            print('Epoch {0} complete'.format(j))
-
-    def gradient_(self, x, y):
+    def backpropagation_(self, x, y):
         nabla_b = [np.zeros(b.shape) for b in self.biases_]
         nabla_w = [np.zeros(w.shape) for w in self.weights_]
-
-        activation = np.matrix(x).T.A
-        activations = [activation]
+        activations = [np.matrix(x).T.A]
         zs = []
         for b, w in zip(self.biases_, self.weights_):
-            z = np.dot(w, activation) + b
-            zs.append(z)
-            activation = sigmoid(z)
-            activations.append(activation)
-
+            zs.append(np.dot(w, activations[-1]) + b)
+            activations.append(sigmoid(zs[-1]))
         delta = (activations[-1] - y) * sigmoid_derivative(zs[-1])
         nabla_b[-1] = delta
         nabla_w[-1] = np.dot(delta, activations[-2].transpose())
         for l in xrange(2, self.num_layers_):
-            z = zs[-l]
-            sp = sigmoid_derivative(z)
-            delta = np.dot(self.weights_[-l + 1].transpose(), delta) * sp
+            delta = np.dot(self.weights_[-l + 1].transpose(), delta) * sigmoid_derivative(zs[-l])
             nabla_b[-l] = delta
             nabla_w[-l] = np.dot(delta, activations[-l - 1].transpose())
         return nabla_b, nabla_w
 
     def fit(self, x, y):
-        training_data = zip(x, y)
-        self.gradient_descent(training_data, self.epochs_, self.batch_size_, self.learning_rate_)
+        for epoch in range(self.epochs_):
+            d_b = [np.zeros(b.shape) for b in self.biases_]
+            d_w = [np.zeros(w.shape) for w in self.weights_]
+            for sample, answer in zip(x, y):
+                delta_d_b, delta_d_w = self.backpropagation_(np.array(sample), answer)
+                d_b = [nb + dnb for nb, dnb in zip(d_b, delta_d_b)]
+                d_w = [nw + dnw for nw, dnw in zip(d_w, delta_d_w)]
+            self.weights_ = [w - (self.learning_rate_ / len(x)) * nw for w, nw in zip(self.weights_, d_w)]
+            self.biases_ = [b - (self.learning_rate_ / len(x)) * nb for b, nb in zip(self.biases_, d_b)]
+            print('Finished {0}'.format(epoch))
         self.fitted_ = True
 
     def predict(self, test_x):
@@ -79,7 +59,7 @@ class FeedforwardNetwork:
             a = np.matrix(x).T.A
             for b, w in zip(self.biases_, self.weights_):
                 a = sigmoid(np.dot(w, a) + b)
-            result.append(1 - a[0, 0])
+            result.append(a[0, 0])
         return result
 
 
@@ -155,14 +135,10 @@ def write_answer(path, data, ids):
 x, x_id = read_x('learn.csv')
 y, y_id = read_y('learn.csv')
 test, test_id = read_x('test.csv', exclude_y=False)
-x, test = preprocess(x, test)
 
-factors = x.shape[1]
+samples, factors = x.shape
 output_clases = 1
-nn = FeedforwardNetwork(layers=[factors, 1000, 100, 1],
-                        learning_rate=1,
-                        epochs=100,
-                        mini_batch=100)
+nn = NeuralNetwork(layers=[factors, factors / 5, 1], learning_rate=10, epochs=100)
 nn.fit(x, y)
 y_test = nn.predict(test)
 
