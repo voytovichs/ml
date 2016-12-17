@@ -139,7 +139,7 @@ test, test_id = read_x('test.csv', exclude_y=False)
 
 samples, factors = x.shape
 output_clases = 1
-nn = NeuralNetwork(layers=[factors, factors / 10, 1], learning_rate=0.2, epochs=80000)
+nn = NeuralNetwork(layers=[factors, factors / 20, 1], learning_rate=0.3, epochs=20000)
 nn.fit(x, y)
 y_test = nn.predict(test)
 
